@@ -11,7 +11,10 @@ import logging
 from temporalio.client import Client
 from temporalio.service import RPCError
 
+import time
+
 from events.topics import Topics
+from services.shared.heartbeat import HeartbeatEmitter
 from services.shared.kafka_client import KafkaConsumer
 from workflows.customer_journey import CustomerJourney
 from workflows.types import ChannelEventSignal
@@ -24,10 +27,12 @@ class SignalBridge:
     def __init__(self):
         self.temporal: Client | None = None
         self.consumer: KafkaConsumer | None = None
+        self.heartbeat = HeartbeatEmitter("signal-bridge")
 
     async def start(self):
         self.temporal = await Client.connect("localhost:7233")
         logger.info("Connected to Temporal")
+        await self.heartbeat.start()
 
         self.consumer = KafkaConsumer(
             topics=[Topics.INTERACTIONS_NORMALIZED],
@@ -39,6 +44,7 @@ class SignalBridge:
         await self.consumer.consume(self._handle)
 
     async def _handle(self, topic: str, key: bytes | None, value: dict):
+        start = time.monotonic()
         customer_id = value.get("customer_id")
         if not customer_id:
             logger.warning("Event missing customer_id, skipping")
@@ -56,6 +62,7 @@ class SignalBridge:
             intent=value.get("intent"),
             payload=value.get("payload", {}),
             occurred_at=value.get("occurred_at", ""),
+            correlation_id=value.get("correlation_id"),
         )
 
         try:
@@ -72,10 +79,16 @@ class SignalBridge:
             await asyncio.sleep(0.5)
             await handle.signal(CustomerJourney.channel_event, signal)
             logger.info("Started new workflow %s and signaled: %s/%s", workflow_id, signal.channel, signal.event_type)
+        except Exception:
+            self.heartbeat.record_error()
+            raise
+        finally:
+            self.heartbeat.record_event(latency_ms=int((time.monotonic() - start) * 1000))
 
     async def stop(self):
         if self.consumer:
             await self.consumer.stop()
+        await self.heartbeat.stop()
 
 
 async def main():

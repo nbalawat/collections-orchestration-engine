@@ -19,13 +19,14 @@ with workflow.unsafe.imports_passed_through():
         AIAgentResult,
         ChannelEventSignal,
         ComplianceFlagSignal,
+        ContactStats,
         JourneyStage,
         JourneyState,
         PaymentSignal,
         StrategyDecision,
         StrategyUpdateSignal,
     )
-    from workflows.activities import account, strategy, compliance, dispatch
+    from workflows.activities import account, strategy, compliance, dispatch, history
 
 
 ACTIVITY_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=1))
@@ -39,6 +40,8 @@ class CustomerJourney:
         self.inbox: list[ChannelEventSignal] = []
         self.payment_inbox: list[PaymentSignal] = []
         self.pending_tick = False
+        self._latest_stats: ContactStats | None = None
+        self._current_trace_id: str | None = None
 
     # ── Main workflow loop ───────────────────────────────────────────
 
@@ -189,6 +192,9 @@ class CustomerJourney:
 
     async def _handle_channel_event(self, evt: ChannelEventSignal) -> None:
         self.state.last_contact_at = evt.occurred_at
+        # Inbound event seeds the trace; subsequent decisions/actions reuse it.
+        if evt.correlation_id:
+            self._current_trace_id = evt.correlation_id
 
         if evt.intent == "PTP":
             amount = evt.payload.get("amount", self.state.balance * 0.5)
@@ -226,10 +232,22 @@ class CustomerJourney:
             self.state.active_ptp["status"] = "KEPT"
             self.state.active_ptp = None
 
+        # Re-read DPD from the ledger rather than guessing — the payment processor
+        # owns delinquency status; we just reflect it.
+        try:
+            refreshed: AccountInfo = await workflow.execute_activity(
+                account.lookup_account,
+                self.state.customer_id,
+                start_to_close_timeout=timedelta(seconds=10),
+                retry_policy=ACTIVITY_RETRY,
+            )
+            self.state.dpd = refreshed.days_past_due
+            self.state.balance = refreshed.current_balance
+        except Exception:
+            pass
+
         if self.state.balance <= 0 or self.state.dpd <= 0:
             await self._transition(JourneyStage.CURED, f"payment received: ${pmt.amount}", "payment_processor")
-        else:
-            self.state.dpd = max(0, self.state.dpd - 30)
 
     async def _evaluate_strategy(self) -> StrategyDecision:
         info = AccountInfo(
@@ -241,12 +259,20 @@ class CustomerJourney:
             compliance_flags=self.state.compliance_flags,
         )
 
+        stats: ContactStats = await workflow.execute_activity(
+            history.compute_contact_stats,
+            self.state.customer_id,
+            start_to_close_timeout=timedelta(seconds=8),
+            retry_policy=ACTIVITY_RETRY,
+        )
+
         decision: StrategyDecision = await workflow.execute_activity(
             strategy.evaluate_strategy,
-            info,
+            args=[info, stats],
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=ACTIVITY_RETRY,
         )
+        self._latest_stats = stats
 
         self.state.segment = decision.segment
         self.state.evaluation_count += 1
@@ -254,7 +280,7 @@ class CustomerJourney:
 
         await workflow.execute_activity(
             dispatch.publish_decision,
-            args=[decision, self.state.customer_id, workflow.info().workflow_id],
+            args=[decision, self.state.customer_id, workflow.info().workflow_id, self._current_trace_id],
             start_to_close_timeout=timedelta(seconds=10),
         )
 
@@ -284,9 +310,11 @@ class CustomerJourney:
             reason=f"strategy evaluation #{self.state.evaluation_count}",
         )
 
+        local_hour = self._latest_stats.customer_local_hour if self._latest_stats else 14
+        voice_7d = self._latest_stats.voice_attempts_7d if self._latest_stats else 0
         comp_result = await workflow.execute_activity(
             compliance.check_compliance,
-            args=[action, self.state.compliance_flags, 14, 0],
+            args=[action, self.state.compliance_flags, local_hour, voice_7d],
             start_to_close_timeout=timedelta(seconds=5),
         )
 
@@ -301,6 +329,7 @@ class CustomerJourney:
                     comp_result.get("reason", ""),
                     comp_result,
                     action.action_type,
+                    self._current_trace_id,
                 ],
                 start_to_close_timeout=timedelta(seconds=5),
             )
@@ -308,7 +337,7 @@ class CustomerJourney:
 
         result = await workflow.execute_activity(
             dispatch.dispatch_action,
-            args=[action, self.state.customer_id, workflow.info().workflow_id],
+            args=[action, self.state.customer_id, workflow.info().workflow_id, self._current_trace_id],
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=ACTIVITY_RETRY,
         )
@@ -336,6 +365,7 @@ class CustomerJourney:
                 to_stage.value,
                 reason,
                 triggered_by,
+                self._current_trace_id,
             ],
             start_to_close_timeout=timedelta(seconds=5),
         )

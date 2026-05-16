@@ -74,6 +74,15 @@ export const api = {
   // Workflow detail
   getWorkflowActions: (id: string) => fetchJSON<{ actions: WorkflowAction[] }>(`/workflows/${id}/actions`),
   getWorkflowEvents: (id: string) => fetchJSON<{ events: Event[] }>(`/workflows/${id}/events`),
+
+  // Platform Operations
+  platformServices: () => fetchJSON<{ services: ServiceHeartbeat[]; timestamp: number }>('/platform/services'),
+  platformKafkaTopics: () => fetchJSON<{ topics: KafkaTopicInfo[]; timestamp: number }>('/platform/kafka/topics'),
+  platformConsumerLag: () => fetchJSON<{ consumer_groups: ConsumerGroupLag[]; timestamp: number }>('/platform/kafka/consumer-lag'),
+  platformOpaPolicies: () => fetchJSON<{ policies: OpaPolicy[]; count: number }>('/platform/opa/policies'),
+  platformOpaDecisions: (limit = 50) => fetchJSON<{ decisions: OpaDecision[] }>(`/platform/opa/decisions?limit=${limit}`),
+  platformTrace: (eventId: string) => fetchJSON<TraceResult>(`/platform/trace/${eventId}`),
+  platformHealth: () => fetchJSON<PlatformHealth>('/platform/health/summary'),
 };
 
 // Types
@@ -278,4 +287,75 @@ export interface WorkflowAction {
   priority: number;
   reason: string;
   timestamp?: string;
+}
+
+export interface ServiceHeartbeat {
+  service_name: string;
+  instance_id: string;
+  status: string;
+  throughput_per_sec: number | null;
+  error_count_5m: number;
+  p99_latency_ms: number | null;
+  extra: Record<string, unknown>;
+  last_seen_at: string;
+  seconds_since_last_seen: number;
+}
+
+export interface KafkaTopicInfo {
+  topic: string;
+  partition_count: number;
+  total_messages: number;
+  throughput_per_sec: number | null;
+  partitions: { id: number; leader: number; begin_offset: number; end_offset: number }[];
+}
+
+export interface ConsumerGroupLag {
+  group_id: string;
+  total_lag: number;
+  partitions: { topic: string; partition: number; committed: number; end_offset: number; lag: number }[];
+}
+
+export interface OpaPolicy {
+  id: string;
+  ast_size: number;
+  raw_present: boolean;
+}
+
+export interface OpaDecision {
+  audit_id: string;
+  customer_id: string;
+  strategy_version: string;
+  policy_name: string;
+  input_context: Record<string, unknown>;
+  decision: Record<string, unknown>;
+  evaluated_at: string;
+}
+
+export interface TraceHop {
+  event_id: string;
+  customer_id: string;
+  event_type: string;
+  event_category: string;
+  channel: string;
+  direction: string;
+  source_service: string;
+  payload: Record<string, unknown>;
+  correlation_id: string;
+  occurred_at: string;
+  received_at: string;
+}
+
+export interface TraceResult {
+  event: TraceHop;
+  correlation_id: string;
+  trace: TraceHop[];
+  hop_count: number;
+}
+
+export interface PlatformHealth {
+  events_last_5m: number;
+  events_per_sec_estimate: number;
+  services_healthy: number;
+  services_total: number;
+  kafka_topics: number;
 }

@@ -21,6 +21,7 @@ SERVICES = [
     ("Temporal Worker", "workflows.worker", [sys.executable, "-m", "workflows.worker"]),
     ("Signal Bridge", "services.signal_bridge", [sys.executable, "-m", "services.signal_bridge"]),
     ("Event Projector", "services.event_projector", [sys.executable, "-m", "services.event_projector"]),
+    ("Traffic Generator", "services.traffic_generator", [sys.executable, "-m", "services.traffic_generator"]),
 ]
 
 

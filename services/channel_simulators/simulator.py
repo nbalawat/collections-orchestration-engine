@@ -93,7 +93,8 @@ class ChannelSimulator:
     ) -> ChannelEvent:
         messages = SMS_INBOUND_MESSAGES.get(intent, SMS_INBOUND_MESSAGES[Intent.GENERAL_INQUIRY])
         text = random.choice(messages)
-
+        # New inbound channel event starts a trace.
+        trace_id = str(uuid.uuid4())
         event = ChannelEvent(
             event_id=str(uuid.uuid4()),
             customer_id=customer_id,
@@ -103,6 +104,7 @@ class ChannelSimulator:
             event_type="sms_received",
             intent=intent,
             payload={"text": text, "from_number": "+1555" + str(random.randint(1000000, 9999999)), **(payload_override or {})},
+            correlation_id=trace_id,
             occurred_at=datetime.now(timezone.utc),
             source_service="adapter-sms",
         )
@@ -115,6 +117,7 @@ class ChannelSimulator:
         customer_id: str,
         template: str = "payment_reminder",
         account_id: str | None = None,
+        correlation_id: str | None = None,
     ) -> ChannelEvent:
         event = ChannelEvent(
             event_id=str(uuid.uuid4()),
@@ -124,6 +127,7 @@ class ChannelSimulator:
             direction=Direction.OUTBOUND,
             event_type="sms_sent",
             payload={"template": template, "status": "delivered"},
+            correlation_id=correlation_id or str(uuid.uuid4()),
             occurred_at=datetime.now(timezone.utc),
             source_service="adapter-sms",
         )
@@ -137,6 +141,7 @@ class ChannelSimulator:
         event_type: str = "delivered",
         direction: Direction = Direction.OUTBOUND,
         account_id: str | None = None,
+        correlation_id: str | None = None,
     ) -> ChannelEvent:
         event = ChannelEvent(
             event_id=str(uuid.uuid4()),
@@ -146,6 +151,7 @@ class ChannelSimulator:
             direction=direction,
             event_type=f"email_{event_type}",
             payload={"email_event": event_type, "template": "collections_notice"},
+            correlation_id=correlation_id or str(uuid.uuid4()),
             occurred_at=datetime.now(timezone.utc),
             source_service="adapter-email",
         )
@@ -179,6 +185,7 @@ class ChannelSimulator:
                 "agent_id": f"AGT-{random.randint(100, 999)}" if "connected" in outcome else None,
                 "contact_id": str(uuid.uuid4())[:8],
             },
+            correlation_id=str(uuid.uuid4()),
             occurred_at=datetime.now(timezone.utc),
             source_service="adapter-voice",
         )
@@ -209,6 +216,7 @@ class ChannelSimulator:
                 "disposition": outcome,
                 "attempt_number": random.randint(1, 5),
             },
+            correlation_id=str(uuid.uuid4()),
             occurred_at=datetime.now(timezone.utc),
             source_service="adapter-dialer",
         )

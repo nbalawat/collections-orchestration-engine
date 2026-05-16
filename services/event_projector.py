@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 import uuid
 
 import asyncpg
@@ -16,6 +17,7 @@ import orjson
 import redis.asyncio as aioredis
 
 from events.topics import Topics
+from services.shared.heartbeat import HeartbeatEmitter
 from services.shared.kafka_client import KafkaConsumer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -31,11 +33,13 @@ class EventProjector:
         self.redis: aioredis.Redis | None = None
         self.consumer: KafkaConsumer | None = None
         self.event_count = 0
+        self.heartbeat = HeartbeatEmitter("event-projector")
 
     async def start(self):
         self.db = await asyncpg.connect(DB_DSN)
         self.redis = aioredis.from_url(REDIS_URL, decode_responses=False)
         logger.info("Connected to Postgres and Redis")
+        await self.heartbeat.start()
 
         self.consumer = KafkaConsumer(
             topics=Topics.ALL,
@@ -71,7 +75,13 @@ class EventProjector:
     def _extract_payload(self, topic: str, value: dict) -> dict:
         base = value.get("payload", {})
         if topic == Topics.DECISIONS:
-            return {**base, "decision_type": value.get("decision_type"), "strategy_version": value.get("strategy_version"), "policy_name": value.get("policy_name")}
+            return {
+                **base,
+                "decision_type": value.get("decision_type"),
+                "strategy_version": value.get("strategy_version"),
+                "policy_name": value.get("policy_name"),
+                "rationale": value.get("rationale"),
+            }
         if topic == Topics.COMPLIANCE:
             return {**base, "check_type": value.get("check_type"), "passed": value.get("passed"), "rule_name": value.get("rule_name"), "action_blocked": value.get("action_blocked"), **value.get("details", {})}
         if topic == Topics.LIFECYCLE:
@@ -83,6 +93,7 @@ class EventProjector:
         return base
 
     async def _handle(self, topic: str, key: bytes | None, value: dict):
+        start = time.monotonic()
         customer_id = value.get("customer_id", "")
         event_id = value.get("event_id", str(uuid.uuid4()))
 
@@ -134,15 +145,18 @@ class EventProjector:
                 )
 
             self.event_count += 1
+            self.heartbeat.record_event(latency_ms=int((time.monotonic() - start) * 1000))
             if self.event_count % 100 == 0:
                 logger.info("Projected %d events", self.event_count)
 
         except Exception:
+            self.heartbeat.record_error()
             logger.exception("Failed to project event from %s", topic)
 
     async def stop(self):
         if self.consumer:
             await self.consumer.stop()
+        await self.heartbeat.stop()
         if self.db:
             await self.db.close()
         if self.redis:

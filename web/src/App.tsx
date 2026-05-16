@@ -1,11 +1,12 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, Brain, Cog, Play, Radio, UserSearch } from 'lucide-react'
+import { LayoutDashboard, Users, Brain, Cog, Play, Radio, UserSearch, Server } from 'lucide-react'
 import CommandCenter from './pages/CommandCenter'
 import CustomerJourney from './pages/CustomerJourney'
 import AgentDesktop from './pages/AgentDesktop'
 import AIExplorer from './pages/AIExplorer'
 import StrategyConsole from './pages/StrategyConsole'
 import Scenarios from './pages/Scenarios'
+import PlatformOps from './pages/PlatformOps'
 
 const NAV = [
   { to: '/', icon: Radio, label: 'Command Center' },
@@ -14,6 +15,7 @@ const NAV = [
   { to: '/ai', icon: Brain, label: 'AI Explorer' },
   { to: '/strategy', icon: Cog, label: 'Strategy Console' },
   { to: '/scenarios', icon: Play, label: 'Scenarios' },
+  { to: '/platform', icon: Server, label: 'Platform Ops' },
 ]
 
 export default function App() {
@@ -57,6 +59,7 @@ export default function App() {
           <Route path="/ai" element={<AIExplorer />} />
           <Route path="/strategy" element={<StrategyConsole />} />
           <Route path="/scenarios" element={<Scenarios />} />
+          <Route path="/platform" element={<PlatformOps />} />
         </Routes>
       </main>
     </div>

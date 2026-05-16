@@ -27,6 +27,7 @@ from services.api.routes.portfolio import router as portfolio_router
 from services.api.routes.events import router as events_router
 from services.api.routes.strategies import router as strategies_router
 from services.api.routes.scenarios import router as scenarios_router
+from services.api.routes.platform import router as platform_router
 from services.api.ws.handler import router as ws_router
 from services.shared.config import get_settings
 
@@ -71,6 +72,7 @@ app.include_router(portfolio_router, prefix="/api/portfolio", tags=["portfolio"]
 app.include_router(events_router, prefix="/api/events", tags=["events"])
 app.include_router(strategies_router, prefix="/api/strategies", tags=["strategies"])
 app.include_router(scenarios_router, prefix="/api/scenarios", tags=["scenarios"])
+app.include_router(platform_router, prefix="/api/platform", tags=["platform-ops"])
 app.include_router(ws_router)
 
 

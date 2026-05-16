@@ -9,6 +9,7 @@ from temporalio.worker import Worker
 
 from workflows.customer_journey import CustomerJourney
 from workflows.activities.account import lookup_account
+from workflows.activities.history import compute_contact_stats
 from workflows.activities.strategy import evaluate_strategy
 from workflows.activities.compliance import check_compliance
 from workflows.activities.dispatch import (
@@ -36,6 +37,7 @@ async def main():
         workflows=[CustomerJourney],
         activities=[
             lookup_account,
+            compute_contact_stats,
             evaluate_strategy,
             check_compliance,
             dispatch_action,

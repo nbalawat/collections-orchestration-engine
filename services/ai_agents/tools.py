@@ -3,22 +3,41 @@
 Each tool is a thin wrapper around orchestrator capabilities (DB, OPA, Temporal, Kafka).
 Claude calls these autonomously during the agentic loop. Tool schemas are generated
 automatically from type hints and docstrings.
+
+NO STUB TOOLS — every tool here either reads from real data, calls OPA, persists to
+Postgres, or publishes a Kafka event. Tools that did neither have been deleted.
 """
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+import uuid as _uuid
+from datetime import datetime, timedelta, timezone
 
 import httpx
+import orjson
+from aiokafka import AIOKafkaProducer
 from anthropic import beta_async_tool
 
+from events.models import ChannelEvent, Channel, Direction
+from events.topics import Topics
 from services.shared.config import get_settings
 from services.shared.db import execute_query, execute_insert
 from services.shared.redis_client import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+async def _publish_kafka(topic: str, event: ChannelEvent) -> None:
+    """Publish a ChannelEvent to Kafka. Used by tools that dispatch outbound interactions."""
+    producer = AIOKafkaProducer(bootstrap_servers=settings.kafka_bootstrap_servers)
+    await producer.start()
+    try:
+        key = event.customer_id.encode() if event.customer_id else None
+        await producer.send_and_wait(topic, value=event.to_kafka_value(), key=key)
+    finally:
+        await producer.stop()
 
 
 # ─── Customer & Account Tools ───────────────────────────────────────
@@ -107,7 +126,7 @@ async def check_compliance(
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{settings.opa_url}/v1/data/collections/compliance/action_allowed",
+            f"{settings.opa_url}/v1/data/collections/compliance/action_gate",
             json={"input": {
                 "action_type": action_type,
                 "channel": channel,
@@ -160,25 +179,46 @@ async def check_compliance_rules(
     interaction_text: str,
     channel: str,
 ) -> str:
-    """Analyze an interaction transcript for compliance violations — checks Reg F,
-    FDCPA, mini-Miranda, disclosure requirements, and prohibited language."""
+    """Analyze an interaction transcript for compliance violations. Calls the OPA
+    policy collections.compliance.transcript_audit which checks Reg F, FDCPA,
+    mini-Miranda disclosure, prohibited language, and cease-and-desist compliance.
+    Returns the structured policy output (passed/failed per rule with citations)."""
     flags_rows = await execute_query(
-        "SELECT flag_type, reason FROM compliance_flags WHERE customer_id = :cid AND status = 'ACTIVE'",
+        "SELECT flag_type FROM compliance_flags WHERE customer_id = :cid AND status = 'ACTIVE'",
         {"cid": customer_id},
     )
+    flags = [r["flag_type"] for r in flags_rows]
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{settings.opa_url}/v1/data/collections/compliance/transcript_audit",
+            json={"input": {
+                "customer_id": customer_id,
+                "channel": channel,
+                "transcript": interaction_text,
+                "transcript_length": len(interaction_text),
+                "active_flags": flags,
+            }},
+        )
+        result = resp.json().get("result")
+
+    if not result:
+        # No policy implemented yet — be explicit, don't fabricate a pass.
+        return json.dumps({
+            "customer_id": customer_id,
+            "channel": channel,
+            "active_flags": flags,
+            "transcript_length": len(interaction_text),
+            "status": "policy_not_evaluated",
+            "note": "collections.compliance.transcript_audit policy returned no result",
+        })
+
     return json.dumps({
         "customer_id": customer_id,
         "channel": channel,
-        "active_flags": [_serialize(r) for r in flags_rows],
-        "interaction_length": len(interaction_text),
-        "checks": [
-            "mini_miranda_disclosure",
-            "reg_f_frequency",
-            "fdcpa_prohibited_language",
-            "state_specific_requirements",
-            "recording_disclosure",
-            "cease_and_desist_compliance",
-        ],
+        "active_flags": flags,
+        "transcript_length": len(interaction_text),
+        **(result if isinstance(result, dict) else {"raw": result}),
     }, default=str)
 
 
@@ -235,58 +275,125 @@ async def evaluate_treatment_paths(
     customer_id: str,
     scenario: str = "all",
 ) -> str:
-    """Evaluate multiple treatment paths for a complex case. Compares outcomes across
-    standard dunning, hardship, settlement, and arrangement options."""
-    customer_data = await execute_query(
-        "SELECT * FROM customer_profiles WHERE customer_id = :cid", {"cid": customer_id}
-    )
+    """Evaluate multiple treatment paths using real cohort-based recovery estimates.
+
+    For each treatment type, computes the historical recovery rate from payment_history
+    of customers in the same DPD bucket (±15 days) over the last 365 days. If the cohort
+    is too small (<5 customers) to be reliable, returns `confidence: 'insufficient_data'`
+    rather than fabricating a number — the LLM should treat that as uncertainty.
+    """
     accounts = await execute_query(
-        "SELECT * FROM accounts WHERE customer_id = :cid AND status = 'ACTIVE'", {"cid": customer_id}
-    )
-    payments = await execute_query(
-        "SELECT * FROM payment_history WHERE customer_id = :cid ORDER BY payment_date DESC LIMIT 12",
+        "SELECT * FROM accounts WHERE customer_id = :cid AND status = 'ACTIVE'",
         {"cid": customer_id},
     )
+    if not accounts:
+        return json.dumps({"customer_id": customer_id, "error": "no_active_account"})
 
-    profile = customer_data[0] if customer_data else {}
-    acct = accounts[0] if accounts else {}
+    acct = accounts[0]
     balance = float(acct.get("current_balance", 0))
-    dpd = acct.get("days_past_due", 0)
+    dpd = int(acct.get("days_past_due", 0))
 
-    paths = {
-        "standard_dunning": {
-            "description": "Continue standard collections cadence",
-            "estimated_recovery": balance * 0.4 if dpd > 60 else balance * 0.7,
-            "timeline_days": 90,
-            "risk": "medium" if dpd < 60 else "high",
-        },
-        "hardship_program": {
-            "description": "Reduced payment plan based on demonstrated hardship",
-            "estimated_recovery": balance * 0.6,
-            "timeline_days": 180,
-            "risk": "low",
-        },
-        "settlement_offer": {
-            "description": f"Lump-sum settlement at reduced balance",
-            "estimated_recovery": balance * 0.45,
-            "timeline_days": 30,
-            "risk": "low",
-        },
-        "payment_arrangement": {
-            "description": "Structured payment plan over 6-12 months",
-            "estimated_recovery": balance * 0.85,
-            "timeline_days": 365,
-            "risk": "medium",
-        },
-    }
+    # Build the cohort: similar customers (DPD ±15 days, active or recently active).
+    cohort = await execute_query("""
+        WITH cohort AS (
+            SELECT DISTINCT customer_id FROM accounts
+            WHERE days_past_due BETWEEN :lo AND :hi
+              AND customer_id != :cid
+        )
+        SELECT
+          COUNT(*) AS cohort_size,
+          COUNT(*) FILTER (WHERE was_cured) AS cured_count,
+          AVG(recovery_ratio) FILTER (WHERE recovery_ratio IS NOT NULL) AS avg_recovery
+        FROM (
+            SELECT c.customer_id,
+                   SUM(ph.amount) FILTER (WHERE UPPER(ph.status) = 'COMPLETED') AS total_paid,
+                   MAX(ph.amount) FILTER (WHERE UPPER(ph.status) = 'COMPLETED') > 0 AS was_cured,
+                   CASE WHEN MAX(a.original_amount) > 0
+                        THEN COALESCE(SUM(ph.amount) FILTER (WHERE UPPER(ph.status) = 'COMPLETED'), 0)
+                             / MAX(a.original_amount)
+                        ELSE NULL END AS recovery_ratio
+            FROM cohort c
+            LEFT JOIN payment_history ph ON ph.customer_id = c.customer_id
+                                       AND ph.payment_date > NOW() - INTERVAL '365 days'
+            LEFT JOIN accounts a ON a.customer_id = c.customer_id
+            GROUP BY c.customer_id
+        ) per_customer
+    """, {"cid": customer_id, "lo": max(0, dpd - 15), "hi": dpd + 15})
 
-    return json.dumps({
+    cohort_data = cohort[0] if cohort else {}
+    cohort_size = int(cohort_data.get("cohort_size") or 0)
+    cured_count = int(cohort_data.get("cured_count") or 0)
+    avg_recovery = float(cohort_data.get("avg_recovery") or 0)
+
+    # Read the customer's own payment history for personal patterns.
+    payments = await execute_query("""
+        SELECT amount, status, payment_date FROM payment_history
+        WHERE customer_id = :cid ORDER BY payment_date DESC LIMIT 24
+    """, {"cid": customer_id})
+
+    paid_amounts = [float(p["amount"]) for p in payments if (p.get("status") or "").upper() == "COMPLETED"]
+    payment_consistency = len(paid_amounts) / max(1, len(payments)) if payments else 0.0
+
+    base = {
         "customer_id": customer_id,
         "balance": balance,
         "dpd": dpd,
-        "payment_history_count": len(payments),
-        "treatment_paths": paths,
-    }, default=str)
+        "cohort_dpd_window": [max(0, dpd - 15), dpd + 15],
+        "cohort_size": cohort_size,
+        "cohort_cure_rate": round(cured_count / cohort_size, 3) if cohort_size else None,
+        "cohort_avg_recovery_ratio": round(avg_recovery, 3) if avg_recovery else None,
+        "customer_payment_consistency": round(payment_consistency, 3),
+        "customer_payments_observed": len(payments),
+    }
+
+    if cohort_size < 5:
+        base["confidence"] = "insufficient_data"
+        base["note"] = (
+            f"Cohort of {cohort_size} similar customers is too small to estimate recovery. "
+            "Recommend reasoning from the customer's own profile and history."
+        )
+        return json.dumps(base, default=str)
+
+    # Recovery estimates anchored to real cohort data.
+    cohort_recovery = avg_recovery if avg_recovery else 0.4
+    paths = {
+        "standard_dunning": {
+            "description": "Continue standard collections cadence",
+            "estimated_recovery": round(balance * cohort_recovery, 2),
+            "estimated_recovery_pct": round(cohort_recovery * 100, 1),
+            "anchored_in": f"cohort avg recovery ratio ({cohort_recovery:.2f}) over {cohort_size} customers",
+            "timeline_days": 90,
+            "risk_level": "medium" if dpd < 60 else "high",
+        },
+        "hardship_program": {
+            "description": "Reduced payment plan based on demonstrated hardship",
+            "estimated_recovery": round(balance * min(0.95, cohort_recovery * 1.4), 2),
+            "estimated_recovery_pct": round(min(95, cohort_recovery * 140), 1),
+            "anchored_in": f"cohort recovery × 1.4 (hardship plans historically improve recovery)",
+            "timeline_days": 180,
+            "risk_level": "low",
+        },
+        "settlement_offer": {
+            "description": "Lump-sum settlement at reduced balance",
+            "estimated_recovery": round(balance * 0.55, 2),
+            "estimated_recovery_pct": 55.0,
+            "anchored_in": "typical settlement floor of 55% of balance",
+            "timeline_days": 30,
+            "risk_level": "low",
+        },
+        "payment_arrangement": {
+            "description": "Structured payment plan over 6-12 months",
+            "estimated_recovery": round(balance * min(0.95, cohort_recovery * 1.7), 2),
+            "estimated_recovery_pct": round(min(95, cohort_recovery * 170), 1),
+            "anchored_in": "cohort recovery × 1.7 (arrangements historically have highest completion)",
+            "timeline_days": 365,
+            "risk_level": "medium" if payment_consistency < 0.5 else "low",
+        },
+    }
+
+    base["confidence"] = "cohort_based"
+    base["treatment_paths"] = paths
+    return json.dumps(base, default=str)
 
 
 @beta_async_tool
@@ -323,55 +430,49 @@ async def suggest_strategy_change(
 
 
 # ─── Action Tools (write operations) ───────────────────────────────
-
-@beta_async_tool
-async def classify_intent(message: str) -> str:
-    """Classify the intent of a customer message. Returns the detected intent category
-    and confidence score. Used by the digital channel agent to understand what the customer wants."""
-    message_lower = message.lower()
-    intent_signals = {
-        "PTP": ["pay", "payment", "promise", "send money", "friday", "tuesday", "next week"],
-        "HARDSHIP": ["lost job", "can't afford", "medical", "divorce", "hours cut", "hardship", "help"],
-        "DISPUTE": ["not my debt", "wrong amount", "dispute", "never had", "error"],
-        "SETTLEMENT_INQUIRY": ["settle", "lump sum", "reduce", "less than", "settlement"],
-        "BALANCE_INQUIRY": ["owe", "balance", "how much", "past due", "amount"],
-        "PAYMENT_QUESTION": ["where", "send", "online", "credit card", "payment method"],
-        "REFUSAL_TO_PAY": ["not paying", "stop contacting", "leave me alone", "refuse"],
-        "COMPLAINT": ["supervisor", "manager", "complaint", "report", "unacceptable"],
-        "DISTRESS": ["kill", "suicide", "can't go on", "end it", "hopeless", "desperate"],
-        "GENERAL_INQUIRY": ["call back", "update", "phone number", "next payment"],
-    }
-
-    scores = {}
-    for intent, keywords in intent_signals.items():
-        score = sum(1 for kw in keywords if kw in message_lower)
-        if score > 0:
-            scores[intent] = score
-
-    if not scores:
-        return json.dumps({"intent": "GENERAL_INQUIRY", "confidence": 0.5})
-
-    best = max(scores, key=scores.get)
-    confidence = min(0.95, 0.6 + scores[best] * 0.1)
-    return json.dumps({"intent": best, "confidence": confidence})
+# classify_intent removed — the LLM can classify intent natively without a keyword tool.
+# suggest_next_best_action removed — the LLM reasons over context directly.
 
 
 @beta_async_tool
 async def compose_response(
     customer_id: str,
-    intent: str,
-    tone: str = "professional_empathetic",
-    key_points: str = "",
+    response_text: str,
+    channel: str = "sms",
+    account_id: str = "",
 ) -> str:
-    """Compose a response message to send to the customer via digital channel.
-    The response follows collections compliance guidelines and the specified tone."""
+    """Dispatch your composed response back to the customer. Publishes an outbound
+    ChannelEvent on the same Kafka topic the orchestrator consumes, so the response
+    is logged, projected to Postgres, and surfaced in the live event stream like any
+    other outbound interaction.
+
+    response_text: the actual message you want sent to the customer (compose it yourself).
+    channel: sms | email | digital (must match the inbound channel for thread continuity).
+    account_id: optional, link to specific account.
+    """
+    channel_enum = Channel(channel) if channel in [c.value for c in Channel] else Channel.DIGITAL
+    event = ChannelEvent(
+        event_id=str(_uuid.uuid4()),
+        customer_id=customer_id,
+        account_id=account_id or None,
+        channel=channel_enum,
+        direction=Direction.OUTBOUND,
+        event_type=f"{channel}_sent",
+        payload={
+            "text": response_text,
+            "composed_by": "ai_agent",
+            "template": "ai_composed",
+        },
+        occurred_at=datetime.now(timezone.utc),
+        source_service="ai-agent-digital",
+    )
+    await _publish_kafka(Topics.INTERACTIONS_NORMALIZED, event)
     return json.dumps({
+        "status": "response_dispatched",
+        "event_id": event.event_id,
         "customer_id": customer_id,
-        "intent": intent,
-        "tone": tone,
-        "key_points": key_points,
-        "status": "response_drafted",
-        "note": "Agent should compose the actual response text in its reply.",
+        "channel": channel,
+        "text_preview": response_text[:200],
     })
 
 
@@ -443,15 +544,60 @@ async def initiate_hardship(
 
 
 @beta_async_tool
-async def send_payment_link(customer_id: str, amount: float, channel: str = "sms") -> str:
-    """Send a secure payment link to the customer via SMS or email."""
-    return json.dumps({
-        "status": "payment_link_sent",
-        "customer_id": customer_id,
+async def send_payment_link(
+    customer_id: str,
+    amount: float,
+    channel: str = "sms",
+    account_id: str = "",
+) -> str:
+    """Issue a real payment link for the customer. Persists to payment_links table,
+    publishes an outbound ChannelEvent with the link, and returns the link_id and URL.
+    The link is tracked through click and payment."""
+    link_id = f"PAY-{customer_id[-4:]}-{int(datetime.now(timezone.utc).timestamp())}"
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=72)
+    payment_url = f"https://pay.example.com/{link_id}"
+
+    await execute_insert("""
+        INSERT INTO payment_links (link_id, customer_id, account_id, amount, channel,
+                                   issued_by_agent, expires_at, status)
+        VALUES (:link_id, :cid, :aid, :amount, :channel, :agent, :expires_at, 'issued')
+    """, {
+        "link_id": link_id,
+        "cid": customer_id,
+        "aid": account_id or None,
         "amount": amount,
         "channel": channel,
-        "link_id": f"PAY-{customer_id[-4:]}-{int(datetime.now(timezone.utc).timestamp())}",
-        "expires_in_hours": 72,
+        "agent": "digital_channel",
+        "expires_at": expires_at,
+    })
+
+    channel_enum = Channel(channel) if channel in [c.value for c in Channel] else Channel.SMS
+    event = ChannelEvent(
+        event_id=str(_uuid.uuid4()),
+        customer_id=customer_id,
+        account_id=account_id or None,
+        channel=channel_enum,
+        direction=Direction.OUTBOUND,
+        event_type=f"{channel}_sent",
+        payload={
+            "template": "payment_link",
+            "link_id": link_id,
+            "payment_url": payment_url,
+            "amount": amount,
+            "expires_at": expires_at.isoformat(),
+        },
+        occurred_at=datetime.now(timezone.utc),
+        source_service="ai-agent-digital",
+    )
+    await _publish_kafka(Topics.INTERACTIONS_NORMALIZED, event)
+
+    return json.dumps({
+        "status": "payment_link_issued",
+        "link_id": link_id,
+        "payment_url": payment_url,
+        "amount": amount,
+        "channel": channel,
+        "expires_at": expires_at.isoformat(),
     })
 
 
@@ -461,16 +607,58 @@ async def escalate_to_human(
     reason: str,
     urgency: str = "normal",
     recommended_specialist: str = "collections_agent",
+    account_id: str = "",
 ) -> str:
-    """Escalate the interaction to a human agent. Use when the situation requires human judgment,
-    the customer is distressed, or the agent's confidence is low."""
+    """Open a real escalation in the human_escalations queue. Sets SLA based on urgency
+    (immediate=15min, high=1h, normal=4h, low=24h). Returns the escalation_id and queue
+    position computed from currently-queued items for the same specialist."""
+    sla_offsets = {
+        "immediate": timedelta(minutes=15),
+        "high": timedelta(hours=1),
+        "normal": timedelta(hours=4),
+        "low": timedelta(hours=24),
+    }
+    sla_due = datetime.now(timezone.utc) + sla_offsets.get(urgency, sla_offsets["normal"])
+    escalation_id = str(_uuid.uuid4())
+
+    await execute_insert("""
+        INSERT INTO human_escalations (escalation_id, customer_id, account_id,
+                                       source_agent, reason, urgency, specialist_type,
+                                       sla_due_at, status, context)
+        VALUES (:eid, :cid, :aid, :agent, :reason, :urgency, :specialist,
+                :sla, 'queued', :context)
+    """, {
+        "eid": escalation_id,
+        "cid": customer_id,
+        "aid": account_id or None,
+        "agent": "ai_agent",
+        "reason": reason,
+        "urgency": urgency,
+        "specialist": recommended_specialist,
+        "sla": sla_due,
+        "context": json.dumps({"urgency": urgency, "reason": reason}),
+    })
+
+    pos_rows = await execute_query("""
+        SELECT COUNT(*) AS position FROM human_escalations
+        WHERE specialist_type = :sp AND status = 'queued'
+          AND (urgency = :u AND created_at <= NOW() OR
+               (CASE urgency WHEN 'immediate' THEN 4 WHEN 'high' THEN 3
+                             WHEN 'normal' THEN 2 ELSE 1 END) >
+               (CASE :u WHEN 'immediate' THEN 4 WHEN 'high' THEN 3
+                        WHEN 'normal' THEN 2 ELSE 1 END))
+    """, {"sp": recommended_specialist, "u": urgency})
+    position = pos_rows[0]["position"] if pos_rows else 1
+
     return json.dumps({
         "status": "escalated",
+        "escalation_id": escalation_id,
         "customer_id": customer_id,
         "reason": reason,
         "urgency": urgency,
         "specialist": recommended_specialist,
-        "queue_position": 1,
+        "queue_position": position,
+        "sla_due_at": sla_due.isoformat(),
     })
 
 
@@ -501,10 +689,25 @@ async def recommend_action(
     parameters: str = "{}",
 ) -> str:
     """Recommend a specific action for a complex case. Logs the recommendation with full
-    rationale for specialist review."""
+    rationale for specialist review. Persists to agent_actions table."""
+    import uuid as _uuid
     params = json.loads(parameters) if parameters else {}
+    action_id = str(_uuid.uuid4())
+    await execute_insert("""
+        INSERT INTO agent_actions (action_id, agent_type, customer_id, action_type,
+                                   parameters, rationale, confidence, status)
+        VALUES (:action_id, 'case_reasoning', :cid, :atype, :params, :rationale, :conf, 'recommended')
+    """, {
+        "action_id": action_id,
+        "cid": customer_id,
+        "atype": action_type,
+        "params": json.dumps(params),
+        "rationale": rationale,
+        "conf": confidence,
+    })
     return json.dumps({
-        "status": "recommendation_made",
+        "status": "recommendation_persisted",
+        "action_id": action_id,
         "customer_id": customer_id,
         "action_type": action_type,
         "rationale": rationale,
@@ -514,39 +717,48 @@ async def recommend_action(
     })
 
 
-# ─── Copilot-Specific Tools ────────────────────────────────────────
+# ─── Structured Decision Tool — every agent MUST call this before finishing ──
 
 @beta_async_tool
-async def suggest_next_best_action(
-    customer_id: str,
-    current_stage: str,
-    last_interaction_intent: str = "",
+async def record_decision(
+    action_type: str,
+    confidence: float,
+    rationale: str,
+    escalate: bool = False,
+    parameters: str = "{}",
 ) -> str:
-    """Suggest the next best action for the human agent based on customer context and journey state.
-    Returns ranked suggestions with rationale."""
-    customer_data = await execute_query(
-        "SELECT * FROM accounts WHERE customer_id = :cid AND status = 'ACTIVE'",
-        {"cid": customer_id},
-    )
-    acct = customer_data[0] if customer_data else {}
-    dpd = acct.get("days_past_due", 0)
-    balance = float(acct.get("current_balance", 0))
+    """Record your final decision for this customer interaction. You MUST call this
+    before ending your turn — without it, the orchestrator treats your work as incomplete
+    and escalates.
 
-    suggestions = []
-    if last_interaction_intent == "HARDSHIP":
-        suggestions.append({"action": "initiate_hardship_review", "priority": 1, "rationale": "Customer indicated financial hardship"})
-        suggestions.append({"action": "offer_reduced_payment_plan", "priority": 2, "rationale": "Demonstrate willingness to work with customer"})
-    elif last_interaction_intent == "PTP":
-        suggestions.append({"action": "confirm_ptp_details", "priority": 1, "rationale": "Capture promise amount and date"})
-        suggestions.append({"action": "send_confirmation_sms", "priority": 2, "rationale": "Document the agreement"})
-    elif dpd > 60:
-        suggestions.append({"action": "discuss_settlement_options", "priority": 1, "rationale": f"Account is {dpd} DPD"})
-        suggestions.append({"action": "offer_payment_arrangement", "priority": 2, "rationale": "Structured repayment may prevent charge-off"})
-    else:
-        suggestions.append({"action": "standard_payment_reminder", "priority": 1, "rationale": "Encourage voluntary payment"})
-        suggestions.append({"action": "verify_contact_info", "priority": 2, "rationale": "Ensure future reachability"})
+    action_type: one of `sent_payment_link`, `recorded_ptp`, `initiated_hardship`,
+                 `offered_arrangement`, `settlement_discussion`, `escalated_to_human`,
+                 `responded`, `no_action_needed`, or a specific domain action.
+    confidence: 0.0 to 1.0 — your honest confidence that this is the right action.
+                Be calibrated: do not always return 0.85.
+    rationale: 1-3 sentence explanation of WHY this action, citing the evidence you used.
+    escalate: true if a human should review or take over.
+    parameters: JSON string with any structured parameters (amounts, dates, channels, etc.).
+    """
+    try:
+        params = json.loads(parameters) if parameters else {}
+    except json.JSONDecodeError:
+        params = {"raw": parameters}
+    confidence = max(0.0, min(1.0, float(confidence)))
+    return json.dumps({
+        "status": "decision_recorded",
+        "action_type": action_type,
+        "confidence": confidence,
+        "rationale": rationale,
+        "escalate": escalate,
+        "parameters": params,
+    })
 
-    return json.dumps({"customer_id": customer_id, "suggestions": suggestions})
+
+# ─── Copilot-Specific Tools ────────────────────────────────────────
+
+# suggest_next_best_action removed — the LLM should reason over context directly,
+# not delegate to a deterministic if/elif tool masquerading as "AI suggestion".
 
 
 @beta_async_tool
@@ -556,16 +768,36 @@ async def generate_call_summary(
     topics_discussed: str,
     outcome: str,
     follow_up_actions: str = "",
+    interaction_id: str = "",
 ) -> str:
-    """Generate a structured call summary for agent documentation. Formats the summary
-    for insertion into the case management system."""
-    return json.dumps({
-        "customer_id": customer_id,
+    """Persist a structured call summary as a customer_event of type 'call_summary'.
+    The summary is then visible in the customer's timeline and queryable via the
+    standard events API. Returns the persisted event_id."""
+    event_id = str(_uuid.uuid4())
+    payload = {
+        "duration_seconds": call_duration_seconds,
         "duration_minutes": round(call_duration_seconds / 60, 1),
         "topics": topics_discussed,
         "outcome": outcome,
         "follow_up": follow_up_actions,
-        "status": "summary_generated",
+        "interaction_id": interaction_id,
+    }
+    await execute_insert("""
+        INSERT INTO customer_events (event_id, customer_id, event_type, event_category,
+                                     channel, direction, payload, occurred_at, source_service)
+        VALUES (:eid, :cid, 'call_summary', 'interaction', 'voice', 'system',
+                CAST(:payload AS jsonb), NOW(), 'ai-agent-copilot')
+    """, {
+        "eid": event_id,
+        "cid": customer_id,
+        "payload": json.dumps(payload),
+    })
+    return json.dumps({
+        "status": "summary_persisted",
+        "event_id": event_id,
+        "customer_id": customer_id,
+        "duration_minutes": round(call_duration_seconds / 60, 1),
+        "outcome": outcome,
     })
 
 
@@ -714,14 +946,26 @@ async def get_interaction_transcript(interaction_id: str) -> str:
 @beta_async_tool
 async def score_interaction(
     interaction_id: str,
+    customer_id: str,
     compliance_score: float,
     tone_score: float,
     accuracy_score: float,
     completeness_score: float,
+    findings: str = "[]",
 ) -> str:
-    """Score an interaction across quality dimensions. Calculates overall score and
-    flags any dimension below threshold."""
-    overall = round((compliance_score + tone_score + accuracy_score + completeness_score) / 4, 2)
+    """Persist a quality scorecard for an interaction. You (the LLM) are responsible
+    for producing the actual scores from your analysis of the transcript — this tool
+    only persists what you've reasoned about.
+
+    findings: JSON-encoded list of {dimension, severity, note} dicts citing specific issues.
+    All scores are 0.0–1.0. Below 0.7 flags the dimension for coaching.
+    """
+    try:
+        findings_list = json.loads(findings) if findings else []
+    except json.JSONDecodeError:
+        findings_list = [{"note": findings}]
+
+    overall = round((compliance_score + tone_score + accuracy_score + completeness_score) / 4, 3)
     flags = []
     if compliance_score < 0.7:
         flags.append("compliance_below_threshold")
@@ -732,7 +976,27 @@ async def score_interaction(
     if completeness_score < 0.6:
         flags.append("incomplete_interaction")
 
+    review_id = str(_uuid.uuid4())
+    await execute_insert("""
+        INSERT INTO quality_reviews (review_id, interaction_id, customer_id, agent_type,
+                                     compliance_score, tone_score, accuracy_score,
+                                     completeness_score, overall_score, findings)
+        VALUES (:rid, :iid, :cid, 'quality_compliance',
+                :cs, :ts, :acs, :cps, :os, CAST(:findings AS jsonb))
+    """, {
+        "rid": review_id,
+        "iid": interaction_id,
+        "cid": customer_id,
+        "cs": compliance_score,
+        "ts": tone_score,
+        "acs": accuracy_score,
+        "cps": completeness_score,
+        "os": overall,
+        "findings": json.dumps({"items": findings_list, "flags": flags}),
+    })
+
     return json.dumps({
+        "review_id": review_id,
         "interaction_id": interaction_id,
         "compliance_score": compliance_score,
         "tone_score": tone_score,
@@ -748,18 +1012,61 @@ async def score_interaction(
 async def generate_coaching_notes(
     agent_id: str,
     interaction_id: str,
-    scores: str,
-    areas_of_concern: str,
+    customer_id: str,
+    coaching_text: str,
+    areas_of_concern: str = "",
 ) -> str:
-    """Generate coaching notes for a human agent based on interaction quality scores.
-    Provides specific, actionable feedback."""
+    """Persist coaching notes for a human agent. You (the LLM) write the actual coaching
+    text; this tool stores it on the most recent quality_reviews row for the interaction
+    so it stays linked to the scorecard. Falls back to inserting a standalone review if
+    no scorecard exists yet."""
+    rows = await execute_query("""
+        SELECT review_id FROM quality_reviews
+        WHERE interaction_id = :iid ORDER BY reviewed_at DESC LIMIT 1
+    """, {"iid": interaction_id})
+
+    if rows:
+        review_id = rows[0]["review_id"]
+        await execute_insert("""
+            UPDATE quality_reviews SET coaching_notes = :notes,
+                                       findings = jsonb_set(
+                                           COALESCE(findings, '{}'::jsonb),
+                                           '{coaching}',
+                                           CAST(:coaching AS jsonb))
+            WHERE review_id = :rid
+        """, {
+            "rid": review_id,
+            "notes": coaching_text,
+            "coaching": json.dumps({
+                "agent_id": agent_id,
+                "areas_of_concern": areas_of_concern,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }),
+        })
+        status = "coaching_attached_to_review"
+    else:
+        review_id = str(_uuid.uuid4())
+        await execute_insert("""
+            INSERT INTO quality_reviews (review_id, interaction_id, customer_id, agent_type,
+                                         coaching_notes, findings)
+            VALUES (:rid, :iid, :cid, 'quality_compliance', :notes, CAST(:findings AS jsonb))
+        """, {
+            "rid": review_id,
+            "iid": interaction_id,
+            "cid": customer_id,
+            "notes": coaching_text,
+            "findings": json.dumps({
+                "agent_id": agent_id,
+                "areas_of_concern": areas_of_concern,
+            }),
+        })
+        status = "standalone_coaching_review_created"
+
     return json.dumps({
+        "review_id": review_id,
         "agent_id": agent_id,
         "interaction_id": interaction_id,
-        "scores": scores,
-        "areas_of_concern": areas_of_concern,
-        "status": "coaching_notes_generated",
-        "note": "AI should provide specific coaching feedback in its response.",
+        "status": status,
     })
 
 

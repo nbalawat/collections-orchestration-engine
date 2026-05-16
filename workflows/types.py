@@ -42,6 +42,7 @@ class ChannelEventSignal:
     intent: str | None = None
     payload: dict = field(default_factory=dict)
     occurred_at: str = ""
+    correlation_id: str | None = None
 
 
 @dataclass
@@ -105,6 +106,26 @@ class ActionToDispatch:
     channel: str = ""
     payload: dict = field(default_factory=dict)
     reason: str = ""
+
+
+@dataclass
+class ContactStats:
+    """Real contact/attempt statistics computed from customer_events.
+
+    Used to populate OPA inputs that were previously hardcoded — without these,
+    compliance rules about time-of-day, attempt frequency, channel exhaustion, and
+    conflicting signals cannot fire.
+    """
+    customer_local_hour: int = 14
+    voice_attempts_7d: int = 0
+    sms_attempts_7d: int = 0
+    email_attempts_7d: int = 0
+    dialer_attempts_7d: int = 0
+    channel_attempts_7d: dict = field(default_factory=dict)
+    failed_channels: list[str] = field(default_factory=list)
+    conflicting_signals: list[str] = field(default_factory=list)
+    last_contact_at: str | None = None
+    last_inbound_intent: str | None = None
 
 
 @dataclass

@@ -171,6 +171,13 @@ can_contact := false if {
 	full_suppression
 }
 
+# REST-callable wrapper: reads input.action and calls the action_allowed function.
+# The function form `action_allowed(action)` cannot be queried directly via the
+# data API; this rule provides a fixed entry point that the orchestrator can POST to.
+action_gate := action_allowed(input.action) if {
+	input.action
+}
+
 # Comprehensive compliance check result
 check := result if {
 	result := {

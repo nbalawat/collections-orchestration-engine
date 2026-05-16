@@ -31,7 +31,7 @@ async def check_compliance(
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/compliance/action_allowed",
+            f"{OPA_URL}/v1/data/collections/compliance/action_gate",
             json={"input": {**opa_input, "action": action_input}},
         )
         result = resp.json().get("result", {"allowed": False, "reason": "no OPA response"})
