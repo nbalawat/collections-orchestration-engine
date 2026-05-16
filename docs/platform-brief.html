@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collections Orchestration Platform — Stakeholder Brief</title>
+<style>
+  :root {
+    --ink-900: #0f172a;
+    --ink-700: #334155;
+    --ink-500: #64748b;
+    --ink-300: #cbd5e1;
+    --ink-100: #f1f5f9;
+    --ink-50:  #f8fafc;
+    --indigo-700: #4338ca;
+    --indigo-600: #4f46e5;
+    --indigo-100: #e0e7ff;
+    --indigo-50:  #eef2ff;
+    --amber-700: #b45309;
+    --amber-100: #fef3c7;
+    --emerald-700: #047857;
+    --emerald-100: #d1fae5;
+    --rose-700: #be123c;
+    --rose-100: #ffe4e6;
+    --purple-700: #6d28d9;
+    --purple-100: #ede9fe;
+    --cyan-700: #0e7490;
+    --cyan-100: #cffafe;
+    --slate-100: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fafafa; color: var(--ink-900);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+                 "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 32px; }
+  h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.015em; color: var(--ink-900); }
+  h1 { font-size: 2.6rem; line-height: 1.1; margin: 0; }
+  h2 { font-size: 1.6rem; margin: 0 0 0.5rem; }
+  h3 { font-size: 1.15rem; margin: 0 0 0.5rem; }
+  h4 { font-size: 0.95rem; margin: 0 0 0.35rem; color: var(--ink-700); }
+  p  { margin: 0 0 0.85rem; color: var(--ink-700); }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.85em; }
+  code { background: var(--ink-100); padding: 0 4px; border-radius: 3px; color: var(--ink-900); }
+  ul { margin: 0.5rem 0; padding-left: 1.25rem; color: var(--ink-700); }
+  li { margin-bottom: 0.3rem; }
+  a { color: var(--indigo-600); }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #3730a3 100%);
+    color: white;
+    padding: 84px 0 72px;
+  }
+  .hero h1 { color: white; font-size: 3rem; }
+  .hero .tagline { font-size: 1.25rem; color: #c7d2fe; margin-top: 12px; max-width: 720px; }
+  .hero .badges { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .hero .badge { background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.18);
+    color: #e0e7ff; padding: 6px 12px; border-radius: 999px; font-size: 0.78rem;
+    backdrop-filter: blur(8px); }
+
+  /* TABLE OF CONTENTS */
+  .toc {
+    background: white; border-top: 1px solid var(--slate-100);
+    border-bottom: 1px solid var(--slate-100);
+    padding: 18px 0;
+  }
+  .toc ol { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 16px 28px; }
+  .toc li { margin: 0; }
+  .toc a { color: var(--ink-500); text-decoration: none; font-size: 0.85rem; font-weight: 500; }
+  .toc a:hover { color: var(--indigo-600); }
+  .toc .toc-num { color: var(--ink-300); margin-right: 6px; }
+
+  section.page { padding: 56px 0; }
+  section.page.alt { background: white; }
+
+  .lede { font-size: 1.15rem; color: var(--ink-700); max-width: 760px; }
+
+  /* Quick stats row */
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    margin: 32px 0;
+  }
+  .stat { padding: 18px; background: white; border: 1px solid var(--slate-100);
+    border-radius: 10px; }
+  .stat .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-500); }
+  .stat .value { font-size: 1.8rem; font-weight: 700; color: var(--ink-900); margin-top: 4px; }
+  .stat .sub { font-size: 0.78rem; color: var(--ink-500); margin-top: 4px; }
+
+  /* CAPABILITY CARDS */
+  .cap-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
+  }
+  .cap {
+    background: white; border: 1px solid var(--slate-100); border-radius: 14px;
+    padding: 22px 24px; position: relative; overflow: hidden;
+  }
+  .cap::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--indigo-600);
+  }
+  .cap.orchestration::before { background: #3b82f6; }
+  .cap.policy::before        { background: #f59e0b; }
+  .cap.ai::before            { background: #8b5cf6; }
+  .cap.compliance::before    { background: #10b981; }
+  .cap.lakehouse::before     { background: #64748b; }
+  .cap.riskml::before        { background: #4f46e5; }
+  .cap.observability::before { background: #06b6d4; }
+  .cap.ux::before            { background: #ec4899; }
+  .cap-tag {
+    display: inline-block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--ink-500); margin-bottom: 8px;
+  }
+  .cap h3 { font-size: 1.15rem; margin-bottom: 8px; }
+  .cap .proof {
+    margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--slate-100);
+    font-size: 0.85rem; color: var(--ink-700);
+  }
+  .cap .proof strong { color: var(--ink-900); }
+  .cap ul { margin: 0; }
+  .cap ul li { font-size: 0.88rem; }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%);
+    color: #e0e7ff;
+    padding: 32px;
+    border-radius: 14px;
+    overflow-x: auto;
+    margin: 24px 0;
+  }
+  .arch-diagram pre {
+    font-size: 0.78rem; line-height: 1.45;
+    margin: 0; color: #c7d2fe;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  /* STAKEHOLDER CARDS */
+  .stake-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px;
+  }
+  .stake {
+    background: white; border: 1px solid var(--slate-100); border-radius: 14px;
+    padding: 22px;
+  }
+  .stake-head {
+    display: flex; align-items: center; gap: 14px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--slate-100); margin-bottom: 14px;
+  }
+  .stake-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 700;
+    background: var(--indigo-100); color: var(--indigo-700);
+  }
+  .stake-icon.cro       { background: var(--rose-100);    color: var(--rose-700); }
+  .stake-icon.cco       { background: var(--emerald-100); color: var(--emerald-700); }
+  .stake-icon.cto       { background: var(--indigo-100);  color: var(--indigo-700); }
+  .stake-icon.coo       { background: var(--amber-100);   color: var(--amber-700); }
+  .stake-icon.cdo       { background: var(--cyan-100);    color: var(--cyan-700); }
+  .stake-icon.sre       { background: var(--purple-100);  color: var(--purple-700); }
+  .stake-icon.audit     { background: var(--ink-100);     color: var(--ink-700); }
+  .stake-icon.ceo       { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; }
+  .stake-role {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-500);
+  }
+  .stake h3 { font-size: 1.1rem; margin: 2px 0 0; }
+  .stake h4 { color: var(--ink-900); margin-top: 14px; }
+  .stake .focus {
+    background: var(--ink-50); border-left: 3px solid var(--indigo-600);
+    padding: 10px 14px; border-radius: 0 6px 6px 0; margin-top: 6px;
+    font-size: 0.88rem; color: var(--ink-700);
+  }
+  .stake .quote {
+    font-style: italic; color: var(--ink-500); font-size: 0.85rem; margin-top: 10px;
+  }
+  .stake .look-at { font-size: 0.85rem; }
+  .stake .look-at a {
+    display: inline-block; font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem; background: var(--ink-100); padding: 2px 6px; border-radius: 4px;
+    text-decoration: none; margin: 2px 4px 2px 0; color: var(--ink-900);
+  }
+
+  /* Demo flow */
+  .flow {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 16px;
+  }
+  .flow-step {
+    display: grid; grid-template-columns: 48px 1fr; gap: 16px;
+    background: white; border: 1px solid var(--slate-100); border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .flow-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--indigo-100); color: var(--indigo-700);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.95rem;
+  }
+  .flow-step h4 { margin: 0 0 4px; }
+  .flow-step p { margin: 0; font-size: 0.9rem; }
+  .flow-step .quote { font-size: 0.85rem; color: var(--indigo-700); font-style: italic; margin-top: 6px; }
+
+  /* Roadmap */
+  .road {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .road-col {
+    background: white; border: 1px solid var(--slate-100); border-radius: 12px; padding: 20px;
+  }
+  .road-col h4 { color: var(--indigo-700); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .road-col ul { padding-left: 1rem; margin-top: 8px; }
+  .road-col li { font-size: 0.9rem; }
+
+  /* Proof matrix */
+  .matrix {
+    width: 100%; border-collapse: collapse; font-size: 0.88rem;
+    background: white; border: 1px solid var(--slate-100); border-radius: 8px; overflow: hidden;
+  }
+  .matrix th { background: var(--ink-50); color: var(--ink-500); text-align: left;
+    padding: 10px 14px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--slate-100); }
+  .matrix td { padding: 10px 14px; border-top: 1px solid var(--slate-100); color: var(--ink-700); vertical-align: top; }
+  .matrix td.metric { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 0.85rem;
+    color: var(--ink-900); white-space: nowrap; }
+  .matrix td.cap-name { font-weight: 600; color: var(--ink-900); }
+
+  /* Footer */
+  footer {
+    background: #0f172a; color: #cbd5e1; padding: 36px 0;
+    margin-top: 60px; font-size: 0.85rem;
+  }
+  footer a { color: #a5b4fc; }
+
+  /* Two-column lists for capabilities */
+  .two-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+
+  /* Subtle inline pill */
+  .pill { display: inline-block; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px;
+    background: var(--indigo-100); color: var(--indigo-700); margin-right: 4px; font-weight: 600;
+    letter-spacing: 0.02em; vertical-align: middle; }
+  .pill.green  { background: var(--emerald-100); color: var(--emerald-700); }
+  .pill.amber  { background: var(--amber-100);   color: var(--amber-700); }
+  .pill.rose   { background: var(--rose-100);    color: var(--rose-700); }
+  .pill.purple { background: var(--purple-100);  color: var(--purple-700); }
+  .pill.cyan   { background: var(--cyan-100);    color: var(--cyan-700); }
+
+  @media print {
+    .hero { background: #0f172a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    section.page { page-break-inside: avoid; }
+    .toc { display: none; }
+  }
+
+  @media (max-width: 900px) {
+    .cap-grid, .stake-grid, .two-col, .road { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .hero h1 { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================== HERO ============================================== -->
+<header class="hero">
+  <div class="container">
+    <div style="font-size:0.85rem; letter-spacing:0.18em; text-transform:uppercase; color:#a5b4fc; margin-bottom:14px;">
+      Capabilities Brief
+    </div>
+    <h1>Collections Orchestration Platform</h1>
+    <p class="tagline">
+      A real-time, AI-native, compliance-first orchestration platform for collections operations. Built end-to-end on
+      Kafka, Temporal, OPA, Anthropic Claude, and a real AWS S3 medallion lakehouse — with the operational, risk,
+      and audit surfaces every key stakeholder needs.
+    </p>
+    <div class="badges">
+      <span class="badge">Temporal workflows</span>
+      <span class="badge">Kafka spine · 8 topics</span>
+      <span class="badge">OPA policy engine</span>
+      <span class="badge">Claude AI agents</span>
+      <span class="badge">AWS S3 medallion lakehouse</span>
+      <span class="badge">DuckDB analytics</span>
+      <span class="badge">Reg F · §1006.6 / §1006.14 / §1006.34</span>
+      <span class="badge">Champion / challenger A/B</span>
+      <span class="badge">GradientBoosting risk model</span>
+      <span class="badge">WORM audit triggers</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================== TOC ============================================== -->
+<nav class="toc">
+  <div class="container">
+    <ol>
+      <li><a href="#summary"><span class="toc-num">01</span>Executive Summary</a></li>
+      <li><a href="#architecture"><span class="toc-num">02</span>Architecture</a></li>
+      <li><a href="#capabilities"><span class="toc-num">03</span>Platform Capabilities</a></li>
+      <li><a href="#stakeholders"><span class="toc-num">04</span>Stakeholder Takeaways</a></li>
+      <li><a href="#matrix"><span class="toc-num">05</span>Proof Matrix</a></li>
+      <li><a href="#demo"><span class="toc-num">06</span>Recommended Demo Flow</a></li>
+      <li><a href="#roadmap"><span class="toc-num">07</span>Roadmap</a></li>
+    </ol>
+  </div>
+</nav>
+
+<!-- ============================================== EXEC SUMMARY ============================================== -->
+<section class="page" id="summary">
+  <div class="container">
+    <span class="cap-tag">01 · Executive Summary</span>
+    <h2>What this platform is — and why it matters</h2>
+    <p class="lede">
+      The Collections Orchestration Platform is a working, end-to-end system that takes inbound customer events
+      across every channel (SMS, voice, email, dialer, payment processor), runs them through a real policy engine
+      with compliance gating, dispatches the right action via a per-customer Temporal workflow, and invokes
+      AI agents to handle complex cases — while landing every event in a real AWS S3 lakehouse for analytics
+      and ML.
+    </p>
+    <p>
+      Every component inside the orchestration boundary is real. Compliance evaluations are real OPA policy
+      calls citing §1006.6, §1006.14, and §1006.34. AI agent reasoning is real Anthropic Claude invocations
+      with structured decision tools and persisted reasoning traces. The risk model is real
+      <code>sklearn.GradientBoostingClassifier</code> trained on the actual customer event history.
+      The lakehouse writes real Parquet to real S3 buckets that DuckDB queries in production-shaped patterns.
+      The only thing that is simulated is the external channel traffic — which represents the world outside
+      the system.
+    </p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="label">Components built</div>
+        <div class="value">8</div>
+        <div class="sub">orchestrator services, all real</div>
+      </div>
+      <div class="stat">
+        <div class="label">AI agents</div>
+        <div class="value">5</div>
+        <div class="sub">auto-invoked + on-demand</div>
+      </div>
+      <div class="stat">
+        <div class="label">OPA policy modules</div>
+        <div class="value">6</div>
+        <div class="sub">segmentation · treatment · routing · compliance · transcript audit · AI guardrails</div>
+      </div>
+      <div class="stat">
+        <div class="label">UI surfaces</div>
+        <div class="value">8</div>
+        <div class="sub">ops · customer · AI · strategy · platform · lakehouse · risk/ML · scenarios</div>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 8px;">Three commitments the platform makes good on</h3>
+    <div class="two-col" style="margin-top:14px;">
+      <div>
+        <h4>1. Every decision is explainable and auditable.</h4>
+        <p>Every OPA evaluation, every AI agent action, every compliance gate is persisted to a WORM
+        (write-once-read-many) audit table with database-level triggers preventing UPDATE/DELETE. The
+        full input, full output, and a correlation_id traceable end-to-end are captured.</p>
+      </div>
+      <div>
+        <h4>2. AI is governed, not magical.</h4>
+        <p>Every AI agent must close with a structured <code>record_decision</code> tool call — action,
+        confidence (calibrated, not hardcoded), rationale, and parameters. No keyword matching on free
+        text. The same agent feeds into the auditable <code>agent_actions</code> table the same way OPA does.</p>
+      </div>
+      <div>
+        <h4>3. The orchestration boundary is real.</h4>
+        <p>Channel simulation stops at the edge. Inside: real Temporal workflows, real OPA, real Postgres
+        with WORM triggers, real Kafka with consumer groups, real S3 with Parquet, real DuckDB queries,
+        real sklearn models trained on real history.</p>
+      </div>
+      <div>
+        <h4>4. Compliance is a first-class concern, not a bolt-on.</h4>
+        <p>Reg F §1006.6(b) quiet hours, §1006.14(b) multi-channel attempt caps, and §1006.34 validation
+        notice tracking are wired into the workflow with auto-dispatch and immutable proof. Compliance
+        events are emitted on PASS and FAIL, not fail-only.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== ARCHITECTURE ============================================== -->
+<section class="page alt" id="architecture">
+  <div class="container">
+    <span class="cap-tag">02 · Architecture</span>
+    <h2>One-page architecture: what flows where</h2>
+    <p class="lede">
+      The platform is event-driven end-to-end. The same Kafka spine fans out to operational stores
+      (Postgres + Redis for sub-second reads) and to the medallion lakehouse (Bronze → Silver → Gold)
+      for analytics and ML — independent failure domains, single source of truth.
+    </p>
+
+    <div class="arch-diagram">
+<pre>
+External world                                          Real-time path
+─────────────                                           ────────────────
+
+Customer channels                            ChannelSimulator + TrafficGenerator
+(SMS · voice · email · dialer · payments)              │
+                  │                                    ▼
+                  ▼                              ┌────────────────────────────────────────┐
+                                                 │  Kafka (8 topics, customer_id key)     │  ← canonical event spine
+                                                 │  channel · decisions · actions · ai…   │
+                                                 └─┬───────────┬───────────┬──────────────┘
+                                                   │           │           │
+                              ┌────────────────────┘           │           └────────────────────┐
+                              ▼                                ▼                                ▼
+                       signal-bridge                    event-projector                  lake-sink-bronze
+                       (Temporal signal)                (Postgres + Redis)               (gzipped JSONL → S3)
+                              │                                │                                │
+                              ▼                                ▼                                ▼
+              ┌──────────────────────────────┐         ┌──────────────────┐         ┌──────────────────────┐
+              │  CustomerJourney workflow    │         │  Postgres        │         │  Bronze (S3)         │
+              │  (one per customer)          │         │  + WORM triggers │         │  raw ndjson, Hive    │
+              │                              │         │  Redis pub/sub   │         │  topic= / date= /    │
+              │  - lookup_account            │         │  → WebSocket UI  │         │  hour=               │
+              │  - compute_contact_stats     │         └──────────────────┘         └──────────┬───────────┘
+              │  - evaluate_strategy ──────────────► OPA (segmentation,                        │
+              │  - check_compliance  ──────────────►  treatment, routing,                      │ every 120s
+              │  - check transcript_audit ─────────►  compliance, AI                           ▼
+              │  - dispatch_action           │       guardrails, transcript                ┌──────────────────────┐
+              │  - invoke_digital_channel ───────► Claude API (Opus 4.7)                    │  Silver (S3)        │
+              │    record_decision tool      │       (5 agents)                             │  typed Parquet,     │
+              │  - invoke_quality_compliance │                                              │  deduplicated       │
+              │  - PTP lifecycle monitor     │                                              └──────────┬───────────┘
+              │  - validation notice timer   │                                                          │
+              └──────────────┬───────────────┘                                                          │ every 300s
+                             │                                                                          ▼
+                             │ activities publish back to Kafka                                ┌──────────────────────┐
+                             └────────────────────────────────────────────────────────────────►│  Gold (S3)           │
+                                                                                                │  curated marts       │
+                                                                                                │  customer_360,       │
+                                                                                                │  portfolio_daily,    │
+                                                                                                │  strategy_perf,      │
+                                                                                                │  compliance_audit    │
+                                                                                                └──────────┬───────────┘
+                                                                                                            │ DuckDB httpfs
+                                                                                                            ▼
+                                                                                                ┌──────────────────────┐
+                                                                                                │  API · UI · ML       │
+                                                                                                │  feature store,      │
+                                                                                                │  risk model serving, │
+                                                                                                │  ad-hoc SQL          │
+                                                                                                └──────────────────────┘
+</pre>
+    </div>
+
+    <p style="margin-top:14px;">
+      <strong>Two cost curves, one source of truth.</strong> Operational reads (sub-second customer 360,
+      live event stream, WebSocket dashboards) go to Postgres + Redis. Analytics reads (cohort, recovery,
+      model training, BI) go to Parquet via DuckDB — cheap per scan, no operational pressure.
+      Replay from Bronze → identical Silver. Replay from Silver → identical Gold.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================== CAPABILITIES ============================================== -->
+<section class="page" id="capabilities">
+  <div class="container">
+    <span class="cap-tag">03 · Platform Capabilities</span>
+    <h2>Eight capability domains, each independently demonstrable</h2>
+
+    <div class="cap-grid" style="margin-top:24px;">
+
+      <!-- 1. Orchestration -->
+      <div class="cap orchestration">
+        <div class="cap-tag">Real-time orchestration</div>
+        <h3>Per-customer Temporal workflows over a Kafka event spine</h3>
+        <p>Every customer has a long-running Temporal workflow that holds state (stage, active PTP, compliance flags,
+        latest stats) and reacts to signals from a 3-partition Kafka topic keyed on <code>customer_id</code>.
+        Independent consumer groups isolate the orchestrator path, the operational projector, and the lakehouse sink.</p>
+        <ul>
+          <li>3 Kafka consumer groups, 168h retention, partitioned by customer_id</li>
+          <li>Workflow auto-fires AI agents on actionable inbound intents; QC review on completed voice calls</li>
+          <li>Correlation IDs propagate channel → workflow → all downstream events</li>
+          <li>PTP lifecycle monitor + validation notice timer baked into the workflow loop</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> Open <code>/platform</code> → see service heartbeats with live throughput,
+          per-partition Kafka offsets, consumer lag per group, end-to-end trace viewer keyed on <code>event_id</code>.
+        </div>
+      </div>
+
+      <!-- 2. Policy engine -->
+      <div class="cap policy">
+        <div class="cap-tag">Policy engine</div>
+        <h3>OPA-driven segmentation, treatment, routing &amp; compliance</h3>
+        <p>Six Rego policy modules express the entire decisioning surface as code. Every evaluation
+        persists its input and output to <code>strategy_audit_log</code> — full lineage with
+        strategy version, customer, and timestamp.</p>
+        <ul>
+          <li><code>segmentation.rego</code> — DPD bucket × risk tier × value segment</li>
+          <li><code>treatment.rego</code> — action, message tone, AI-review-required flag</li>
+          <li><code>channel_routing.rego</code> — recommended channels, fallbacks, contact window</li>
+          <li><code>compliance.rego</code> — full suppression, written-only, frequency caps, quiet hours</li>
+          <li><code>transcript_audit.rego</code> — FDCPA §807 prohibited language, Mini-Miranda, recording disclosure</li>
+          <li><code>ai_guardrails.rego</code> — per-agent autonomy / escalation rules</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> <code>/strategy</code> → "Why did we do that?" runs one of four canonical
+          cases through the live policy stack as a horizontal flow. Verbatim Rego output at every station.
+        </div>
+      </div>
+
+      <!-- 3. AI agents -->
+      <div class="cap ai">
+        <div class="cap-tag">AI agent platform</div>
+        <h3>Five Claude-powered agents, governed and audited</h3>
+        <p>Two agents are auto-invoked <em>inside</em> the workflow (Digital Channel on inbound HARDSHIP/DISPUTE/etc;
+        Quality Compliance on completed voice calls). Three are on-demand (Case Reasoning, Portfolio Intelligence,
+        Copilot for live human agents).</p>
+        <ul>
+          <li>Every agent must close with a structured <code>record_decision</code> tool call</li>
+          <li>No keyword matching on free text · no hardcoded confidence</li>
+          <li>~25 tools across DB reads, OPA calls, Kafka publishes, Postgres writes</li>
+          <li>Full reasoning trace + tokens + latency captured per invocation</li>
+          <li><span class="pill purple">claude-opus-4-7</span> with adaptive thinking for narrative + digest</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> <code>/ai</code> → live panel showing auto-fired counts per agent + recent
+          actions with markdown rationale. The Activity Digest on a customer story is a real Claude call.
+        </div>
+      </div>
+
+      <!-- 4. Compliance -->
+      <div class="cap compliance">
+        <div class="cap-tag">Compliance &amp; audit</div>
+        <h3>Reg F enforcement + WORM audit at the database layer</h3>
+        <p>Compliance is wired through OPA at the action-dispatch gate and validated by a separate transcript-audit
+        policy. Every audit row is immutable by Postgres triggers — UPDATE / DELETE raise.</p>
+        <ul>
+          <li><strong>§1006.6(b)</strong> quiet hours (8 am – 9 pm local) across voice, sms, dialer, digital</li>
+          <li><strong>§1006.14(b)</strong> 7-in-7 voice cap + per-channel attempt caps + total-attempt cap</li>
+          <li><strong>§1006.34</strong> validation notice scheduled on first outbound + dispatched within 5-day window</li>
+          <li>Compliance events emitted on PASS and FAIL — full evaluation log, not fail-only</li>
+          <li>WORM triggers on <code>strategy_audit_log</code>, <code>customer_events</code>,
+              <code>ai_reasoning_traces</code>, <code>agent_actions</code>, <code>validation_notices</code></li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> Try to <code>DELETE FROM strategy_audit_log WHERE …</code> at the SQL prompt —
+          the trigger raises "Audit table is append-only; UPDATE/DELETE rejected".
+        </div>
+      </div>
+
+      <!-- 5. Lakehouse -->
+      <div class="cap lakehouse">
+        <div class="cap-tag">Data lakehouse</div>
+        <h3>Real AWS S3 medallion (Bronze → Silver → Gold)</h3>
+        <p>Three real S3 buckets in <code>us-east-1</code>. A separate Kafka consumer group writes gzipped
+        JSON Lines to Bronze every 30s. A scheduled compactor deduplicates by <code>event_id</code> and
+        writes typed Parquet to Silver. A gold-builder runs DuckDB SQL across silver to produce four curated marts.</p>
+        <ul>
+          <li>Bronze: <code>topic= / date= / hour=</code> Hive-partitioned ndjson.gz</li>
+          <li>Silver: snappy Parquet, explicit pyarrow schema, idempotent compaction via manifest</li>
+          <li>Gold marts: <code>customer_360</code>, <code>portfolio_daily</code>, <code>strategy_performance</code>,
+              <code>compliance_audit_daily</code></li>
+          <li>DuckDB+httpfs over S3 powers <code>/api/lakehouse/query</code> and the ad-hoc SQL UI</li>
+          <li>End-to-end data lineage: paste an <code>event_id</code> → see the same record materialized
+              at Kafka, Postgres (WORM), Redis, Bronze (line N of file X), Silver (Parquet row), Gold
+              (mart contributions)</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> <code>/lakehouse</code> → click a recent event chip. Six tier cards
+          render with real S3 keys, raw JSON, Parquet rows, and mart contributions.
+        </div>
+      </div>
+
+      <!-- 6. Risk & ML -->
+      <div class="cap riskml">
+        <div class="cap-tag">Risk &amp; ML</div>
+        <h3>Real model, real forecast, real significance testing</h3>
+        <p>The lakehouse becomes a decision platform. A 25-feature feature store, a trained
+        <code>GradientBoostingClassifier</code>, a Markov roll-rate forecaster, a two-proportion z-test for
+        A/B significance, and a FinOps dashboard for AI spend.</p>
+        <ul>
+          <li>Risk model AUC 0.669 on 1,500 real training rows (49% positive rate)</li>
+          <li>Local explanation: z-score × global importance, top-5 contributors per score</li>
+          <li>Roll-rate Markov from real <code>stage_change</code> events with 30/60/90-day projection</li>
+          <li>Champion vs challenger: lift, 95% CI on difference, p-value, required-n for 5% lift detection</li>
+          <li>AI cost: per-agent per-day token spend, $ from the published rate card</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> <code>/risk-ml</code> → score any customer; the top contributors trace
+          back to specific behavioral features with z-scores. Retrain the model with one button.
+        </div>
+      </div>
+
+      <!-- 7. Observability -->
+      <div class="cap observability">
+        <div class="cap-tag">Observability</div>
+        <h3>Live tech-ops view across services, Kafka &amp; OPA</h3>
+        <p>Every long-running service emits a heartbeat with throughput, p99 latency, and error count.
+        The API exposes Kafka topology (per-partition offsets, throughput, consumer lag) and a live
+        feed of OPA decisions. Correlation IDs make every event traceable end-to-end.</p>
+        <ul>
+          <li>Service heartbeat table with status, throughput/sec, p99, errors_5m</li>
+          <li>Kafka AdminClient queries for per-topic end offsets + consumer group lag</li>
+          <li>OPA decision feed surfaced live (input + output JSON per evaluation)</li>
+          <li>End-to-end trace: paste <code>event_id</code>, see every hop with timing</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> <code>/platform</code> → 3/3 services healthy with live throughput;
+          Kafka topics with per-partition offsets; trace viewer.
+        </div>
+      </div>
+
+      <!-- 8. Stakeholder UI -->
+      <div class="cap ux">
+        <div class="cap-tag">Stakeholder UI</div>
+        <h3>Eight surfaces tailored to who's looking</h3>
+        <p>Operations Floor for the Head of Collections, Customer Story for case investigators,
+        AI Explorer for AI/ML, Strategy Console for risk + policy, Platform Ops for SRE, Data
+        Lakehouse for data architects, Risk &amp; ML for the CRO + data science team.</p>
+        <ul>
+          <li><strong>Operations Floor</strong>: live portfolio pulse, AI agent workbench, A/B comparison, escalation queue</li>
+          <li><strong>Customer Story</strong>: Claude-generated narrative + multi-dimensional Activity Digest with markdown</li>
+          <li><strong>Strategy Console</strong>: 4 stories — Why? · A/B · Heatmaps · Live audit feed</li>
+          <li><strong>Data Lakehouse</strong>: medallion topology + end-to-end lineage + ad-hoc DuckDB SQL</li>
+          <li><strong>Risk &amp; ML</strong>: model card · scoring · roll-rate · significance · cohort vintage · AI cost</li>
+        </ul>
+        <div class="proof">
+          <strong>Proof:</strong> Every page renders from real APIs over real data — no canned screenshots,
+          no placeholders. Take any one page through a stakeholder demo flow in 2 minutes.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== STAKEHOLDERS ============================================== -->
+<section class="page alt" id="stakeholders">
+  <div class="container">
+    <span class="cap-tag">04 · Stakeholder Takeaways</span>
+    <h2>What each stakeholder should walk away with</h2>
+    <p class="lede">
+      Each role has one or two pages designed to answer their first ten questions. The takeaways here are the
+      one-liners they'll repeat back in their own meetings — and the proof points that survive the second-look.
+    </p>
+
+    <div class="stake-grid" style="margin-top:28px;">
+
+      <!-- CEO -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon ceo">CEO</div>
+          <div>
+            <div class="stake-role">C-Suite · CEO / President</div>
+            <h3>"Does this move the business?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>One operating system for collections — not a stack of point tools — with measurable cure rate,
+              recovery, and compliance enforcement.</li>
+          <li>AI is governed and auditable, not a black box. Every action has a structured decision, a confidence,
+              and a rationale that's persisted immutably.</li>
+          <li>Champion / challenger A/B is built-in. New strategies are introduced safely, measured rigorously,
+              and rolled out by allocation %.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Operations Floor</a><a href="#">Risk &amp; ML model card</a><a href="#">A/B significance</a>
+        </div>
+        <div class="quote">"This is the platform our collections engine becomes."</div>
+      </div>
+
+      <!-- CTO / CIO -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon cto">CTO</div>
+          <div>
+            <div class="stake-role">Chief Technology / Information Officer</div>
+            <h3>"Can we actually deploy this?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>Event-driven architecture with three independent consumer groups, real Kafka spine,
+              and a working medallion lakehouse on AWS S3.</li>
+          <li>Every event carries a correlation_id that survives all six hops — verifiable end-to-end in the
+              trace viewer.</li>
+          <li>Production-shaped pieces: Temporal for durability, OPA for externalized policy, Postgres WORM for
+              audit, sklearn for ML serving, DuckDB for analytics — open-source where it matters, portable to
+              MSK + RDS in a separate migration phase.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Platform Operations</a><a href="#">Data Lakehouse · lineage</a><a href="#">Architecture diagram</a>
+        </div>
+        <div class="quote">"The architecture is real — not a slide."</div>
+      </div>
+
+      <!-- CRO -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon cro">CRO</div>
+          <div>
+            <div class="stake-role">Chief Risk Officer</div>
+            <h3>"Show me the model, the lift, and the audit."</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>Real GradientBoosting risk model trained on the live event store. AUC, Brier, feature importance,
+              and one-click retrain are all visible.</li>
+          <li>Roll-rate forecasting via Markov projection of the empirical transition matrix — 30/60/90 day
+              portfolio outlook with absorbing CURED / CHARGED_OFF states.</li>
+          <li>Champion vs challenger with two-proportion z-test: lift, 95% CI on the difference, p-value, and the
+              required sample size to detect a 5% lift at 80% power.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Risk &amp; ML page</a><a href="#">Strategy Console</a><a href="#">Cohort vintage</a>
+        </div>
+        <div class="quote">"This is how we'll run model risk management for collections."</div>
+      </div>
+
+      <!-- CCO -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon cco">CCO</div>
+          <div>
+            <div class="stake-role">Chief Compliance Officer / Legal</div>
+            <h3>"Will this survive a CFPB exam?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>Reg F §1006.6(b), §1006.14(b), §1006.34 enforced at the action-dispatch gate with real OPA policy
+              modules — and tested verifiably against per-channel attempt caps, total caps, quiet hours, and
+              validation notice deadlines.</li>
+          <li>WORM audit at the Postgres trigger layer. Audit rows cannot be silently changed; status-only
+              transitions on <code>agent_actions</code> are explicitly carved out and logged.</li>
+          <li>Compliance events emitted on PASS and FAIL — the regulator gets the full evaluation log, not just
+              the denials.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Operations Floor · enforcement</a><a href="#">Customer Story · compliance section</a><a href="#">Audit trail</a>
+        </div>
+        <div class="quote">"We can defend every action we took on this account."</div>
+      </div>
+
+      <!-- COO / Head of Collections -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon coo">COO</div>
+          <div>
+            <div class="stake-role">Head of Collections / COO</div>
+            <h3>"What does my team do on this platform?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>Operations Floor: live portfolio pulse, channel heatmap, in-flight escalation queue with SLA timers,
+              and the AI agent workbench — designed for a Head of Collections to watch all day.</li>
+          <li>Customer Story: one click into any customer, the Claude-generated narrative and Activity Digest tell
+              the whole story in 60 seconds. No log scrolling.</li>
+          <li>Every PTP, hardship transition, and settlement attempt is captured with rationale — the agent's or
+              the strategy's — so supervisors can debrief any case.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Operations Floor</a><a href="#">Customer Story</a><a href="#">AI Explorer</a>
+        </div>
+        <div class="quote">"My supervisors can answer 'why?' on any case in two clicks."</div>
+      </div>
+
+      <!-- CDO / Data Leader -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon cdo">CDO</div>
+          <div>
+            <div class="stake-role">Chief Data Officer / Head of Analytics</div>
+            <h3>"How does this fit my data platform?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>Real medallion lakehouse on AWS S3 — Bronze (raw ndjson), Silver (typed Parquet, dedup), Gold
+              (curated marts). Standard pattern, standard tools, ready for Iceberg or Delta if desired.</li>
+          <li>Every customer event becomes feature-store input within ~2 minutes (Bronze flush 30s, Silver
+              compaction 2m). The same Parquet can be queried by DuckDB, Athena, Spark, Trino, Snowflake
+              external tables — no proprietary lock-in.</li>
+          <li>End-to-end lineage from a single <code>event_id</code> through Kafka → Postgres → S3 tiers → mart
+              contributions — proof that nothing is hand-waved.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Data Lakehouse · topology</a><a href="#">Data lineage</a><a href="#">Gold marts</a>
+        </div>
+        <div class="quote">"The collections platform writes into a real, queryable lakehouse from day one."</div>
+      </div>
+
+      <!-- SRE / Platform Engineering -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon sre">SRE</div>
+          <div>
+            <div class="stake-role">SRE / Platform Engineering</div>
+            <h3>"What's the operational footprint?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>Heartbeats from every long-running service with throughput, p99 latency, and error counts.
+              Kafka consumer lag visible per partition per group.</li>
+          <li>Three independent consumer groups isolate failure modes — Lake Sink can die without affecting
+              OLTP; Event Projector can throttle without blocking workflow signaling.</li>
+          <li>End-to-end tracing via correlation_id (existing today). OpenTelemetry integration is a small,
+              low-risk addition on the roadmap.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">Platform Operations</a><a href="#">Consumer lag</a><a href="#">Trace viewer</a>
+        </div>
+        <div class="quote">"I know what's red, why it's red, and what it'll take to fix."</div>
+      </div>
+
+      <!-- Audit / SOX / SOC2 -->
+      <div class="stake">
+        <div class="stake-head">
+          <div class="stake-icon audit">AUDIT</div>
+          <div>
+            <div class="stake-role">Internal Audit / SOX / SOC2 Type II</div>
+            <h3>"Is the audit trail tamper-evident?"</h3>
+          </div>
+        </div>
+        <h4>Key takeaways</h4>
+        <ul>
+          <li>WORM enforcement at the database layer via Postgres triggers — application code cannot bypass it.
+              Verifiable: try to <code>UPDATE</code> a decision field, the trigger raises.</li>
+          <li>Strategy decisions, AI agent actions, customer events, and AI reasoning traces all have explicit
+              triggers preventing mutation. <code>agent_actions</code> carves out status-only transitions
+              (recorded → dispatched → completed) under its own protect trigger.</li>
+          <li>Every event has a correlation_id traceable across all storage tiers (Postgres, S3 Bronze, S3 Silver) —
+              SOC2 evidence is a single SELECT away.</li>
+        </ul>
+        <h4>What to look at first</h4>
+        <div class="look-at">
+          <a href="#">data/sql/migrate_v03_audit.sql</a><a href="#">Customer Story · audit panel</a>
+        </div>
+        <div class="quote">"We can produce evidence for any control test in minutes, not weeks."</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== PROOF MATRIX ============================================== -->
+<section class="page" id="matrix">
+  <div class="container">
+    <span class="cap-tag">05 · Proof Matrix</span>
+    <h2>One row per concern · one number per row</h2>
+    <p class="lede">
+      The questions stakeholders ask are remarkably consistent. Here is one tight cross-reference: the
+      capability, the stakeholder concern it answers, and the verifiable proof point.
+    </p>
+
+    <table class="matrix" style="margin-top:24px;">
+      <thead>
+        <tr>
+          <th style="width: 28%;">Capability</th>
+          <th style="width: 28%;">Concern it answers</th>
+          <th style="width: 14%;">Stakeholder</th>
+          <th style="width: 30%;">Proof point</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="cap-name">Temporal workflows</td>
+          <td>Long-running, durable state per customer; survives restarts &amp; deploys</td>
+          <td>CTO, SRE</td>
+          <td class="metric">~200 active journeys; Temporal UI on :8080</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Kafka spine (8 topics)</td>
+          <td>Independent failure domains; replay capability</td>
+          <td>CTO, SRE, CDO</td>
+          <td class="metric">3 consumer groups, 168h retention, per-partition offsets visible</td>
+        </tr>
+        <tr>
+          <td class="cap-name">OPA policy engine</td>
+          <td>Policy externalized from code; auditable + hot-reloadable</td>
+          <td>CRO, CCO</td>
+          <td class="metric">6 Rego modules, watched by OPA, every eval logged</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Reg F enforcement</td>
+          <td>§1006.6, §1006.14, §1006.34 actually fire at action-dispatch time</td>
+          <td>CCO, Legal</td>
+          <td class="metric">~95% block rate on synthetic traffic; PASS &amp; FAIL events both logged</td>
+        </tr>
+        <tr>
+          <td class="cap-name">WORM audit triggers</td>
+          <td>Tamper-evident at the DB layer, not just app-layer</td>
+          <td>Audit, CCO</td>
+          <td class="metric">DELETE on strategy_audit_log → trigger raises with audit_id</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Champion/challenger</td>
+          <td>Strategies don't roll out company-wide blindly</td>
+          <td>CRO, CDO</td>
+          <td class="metric">v1.0.0 (90%) + v1.1.0 (10%), per-customer assignment persisted</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Risk model (sklearn)</td>
+          <td>Real predictive layer, not heuristics dressed up as AI</td>
+          <td>CRO, CDO</td>
+          <td class="metric">AUC 0.669 on 1,500 real rows; top contributors per score</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Roll-rate forecast</td>
+          <td>Forward-looking portfolio view, not just observed numbers</td>
+          <td>CRO, COO</td>
+          <td class="metric">30/60/90 day projection with absorbing CURED/CHARGED_OFF</td>
+        </tr>
+        <tr>
+          <td class="cap-name">A/B significance</td>
+          <td>Lift claims have a p-value and a required sample size</td>
+          <td>CRO, CDO</td>
+          <td class="metric">Two-proportion z-test, 95% CI on diff, required-n for 5% lift</td>
+        </tr>
+        <tr>
+          <td class="cap-name">AI agents · 5</td>
+          <td>AI is governed: action, confidence, rationale persisted per call</td>
+          <td>CCO, CRO, COO</td>
+          <td class="metric">record_decision required; reasoning_steps captured</td>
+        </tr>
+        <tr>
+          <td class="cap-name">AI cost / FinOps</td>
+          <td>What does AI cost to run? Per agent, per day, per $</td>
+          <td>CTO, CFO</td>
+          <td class="metric">Per-day per-agent token spend × Anthropic rate card</td>
+        </tr>
+        <tr>
+          <td class="cap-name">S3 medallion lakehouse</td>
+          <td>Same data, two cost curves: OLTP for ops, Parquet for analytics</td>
+          <td>CDO, CTO</td>
+          <td class="metric">Real S3 buckets, Hive-partitioned ndjson → typed Parquet → marts</td>
+        </tr>
+        <tr>
+          <td class="cap-name">DuckDB query layer</td>
+          <td>Ad-hoc SQL against lakehouse without warehouse provisioning</td>
+          <td>CDO, Analytics</td>
+          <td class="metric">~450ms queries against silver+gold via httpfs over S3</td>
+        </tr>
+        <tr>
+          <td class="cap-name">End-to-end lineage</td>
+          <td>Same event materialized at every tier — auditable claim</td>
+          <td>Audit, CDO, CTO</td>
+          <td class="metric">/api/lakehouse/lineage/{event_id} — 6 tier proof in one call</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Correlation IDs</td>
+          <td>Trace any business event across all 6 hops</td>
+          <td>SRE, Audit</td>
+          <td class="metric">trace_id flows channel → workflow → all downstream events</td>
+        </tr>
+        <tr>
+          <td class="cap-name">Live narrative + digest</td>
+          <td>Senior operators don't read logs — they read summaries</td>
+          <td>COO, CCO</td>
+          <td class="metric">Real Claude Opus 4.7 call per customer with markdown output</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================== DEMO FLOW ============================================== -->
+<section class="page alt" id="demo">
+  <div class="container">
+    <span class="cap-tag">06 · Recommended Demo Flow</span>
+    <h2>One narrative, eight stops, twelve minutes</h2>
+    <p class="lede">
+      A guided path that delivers the full story without overwhelming any single stakeholder. Each step
+      hands the next group their first ten questions.
+    </p>
+
+    <div class="flow" style="margin-top:24px;">
+      <div class="flow-step">
+        <div class="flow-num">1</div>
+        <div>
+          <h4>Operations Floor (90s) · <span class="pill amber">COO</span> <span class="pill rose">CRO</span></h4>
+          <p>Start here. Live portfolio pulse, channel heatmap, AI agent workbench, escalation queue.
+          Show that the system is alive without anyone touching it.</p>
+          <div class="quote">"This is what a Head of Collections opens at 8 am."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">2</div>
+        <div>
+          <h4>Click a customer · Customer Story (2 min) · <span class="pill amber">COO</span> <span class="pill green">CCO</span></h4>
+          <p>The Claude-generated narrative at the top tells the story in 60 seconds. Below it, the Activity
+          Digest breaks the journey down by Profile / Activity / System / AI / Compliance / Strategy. Every
+          number traces back to a real event.</p>
+          <div class="quote">"This replaces the case-management screen your supervisor uses today."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">3</div>
+        <div>
+          <h4>AI Explorer (60s) · <span class="pill purple">CTO</span> <span class="pill purple">CDO</span></h4>
+          <p>Explain the five-agent model: two auto-fire inside the orchestrator, three are on-demand, one is
+          a live copilot. Show real recent agent actions with markdown rationale + calibrated confidence.</p>
+          <div class="quote">"Five agents. Each one explainable. Each one auditable."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">4</div>
+        <div>
+          <h4>Strategy Console (2 min) · <span class="pill rose">CRO</span> <span class="pill green">CCO</span></h4>
+          <p>Four stories on one page: (1) Why did we do that? — run a hardship case through OPA live,
+          (2) Champion vs challenger A/B with 24h numbers, (3) Heatmaps showing what the policy is actually
+          doing, (4) Live OPA audit trail with full input/output drill-down.</p>
+          <div class="quote">"Policy as code, with statistical evidence, with full audit."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">5</div>
+        <div>
+          <h4>Risk &amp; ML (2 min) · <span class="pill rose">CRO</span> <span class="pill cyan">CDO</span></h4>
+          <p>Model card with AUC and feature importance. Score a customer live. Show the roll-rate
+          forecast with portfolio projection. Then the A/B significance test with p-value + required-n.
+          Close with the AI cost dashboard.</p>
+          <div class="quote">"The lakehouse becomes a decision platform here."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">6</div>
+        <div>
+          <h4>Data Lakehouse (2 min) · <span class="pill cyan">CDO</span> <span class="pill purple">CTO</span></h4>
+          <p>Three tier cards with real S3 buckets, real object counts. Then click "trace one event"
+          and watch the same event materialize at all six tiers — including the exact line within the
+          exact gzipped object in Bronze.</p>
+          <div class="quote">"This is the proof that the architecture is real."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">7</div>
+        <div>
+          <h4>Platform Operations (60s) · <span class="pill purple">CTO</span> <span class="pill purple">SRE</span></h4>
+          <p>Service heartbeats with real throughput. Kafka topology with per-partition offsets. Consumer
+          lag per group. OPA decision feed. Show that the platform is observable from the inside out.</p>
+          <div class="quote">"Three healthy services, no lag, full trace."</div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="flow-num">8</div>
+        <div>
+          <h4>Close · WORM audit demo (60s) · <span class="pill green">Audit</span> <span class="pill green">CCO</span></h4>
+          <p>Drop into a SQL console (or the API). Try to <code>DELETE</code> a row from
+          <code>strategy_audit_log</code>. The trigger raises with the audit_id. Try to
+          <code>UPDATE agent_actions SET action_type='tampered'</code>. The trigger raises.</p>
+          <div class="quote">"Tamper-evident at the database layer, not just the app."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================== ROADMAP ============================================== -->
+<section class="page" id="roadmap">
+  <div class="container">
+    <span class="cap-tag">07 · Roadmap</span>
+    <h2>What we'd build next</h2>
+    <p class="lede">
+      The platform is feature-complete for a credible bank-grade demonstration. What follows is the
+      sequenced path from POC to production, organized by horizon.
+    </p>
+
+    <div class="road" style="margin-top:28px;">
+
+      <div class="road-col">
+        <h4>Now → 4 weeks</h4>
+        <ul>
+          <li>JWT auth + RBAC on the API and WebSocket layer</li>
+          <li>State-specific compliance overlays (NY DFS, CA Rosenthal, MA, TX)</li>
+          <li>Real STT pipeline (Whisper / Deepgram) feeding the transcript audit policy</li>
+          <li>OpenTelemetry tracing (Jaeger / Datadog APM integration)</li>
+          <li>Cost &amp; rate-limit guardrails on Claude calls (circuit breaker)</li>
+          <li>Settlement &amp; hardship structured workflows (real plan tables)</li>
+        </ul>
+      </div>
+
+      <div class="road-col">
+        <h4>4 weeks → 3 months</h4>
+        <ul>
+          <li>Production deployment IaC (Terraform / CDK for AWS)</li>
+          <li>Migrate Kafka → Amazon MSK, Postgres → RDS</li>
+          <li>Multi-tenant + multi-portfolio architecture</li>
+          <li>Schema registry for Kafka events (AWS Glue / Confluent)</li>
+          <li>Customer self-service portal (the other side of the orchestration)</li>
+          <li>WhatsApp / Apple Messages for Business channels</li>
+          <li>Skip tracing / contact verification integration (LexisNexis stub)</li>
+        </ul>
+      </div>
+
+      <div class="road-col">
+        <h4>3 → 9 months</h4>
+        <ul>
+          <li>Full MLOps platform: training pipeline, model registry, online serving</li>
+          <li>Champion / challenger with Bayesian uplift modeling</li>
+          <li>Customer-360 embeddings + similarity search</li>
+          <li>RAG over policy documents and resolved-case precedents</li>
+          <li>Regulatory reporting dashboards (CFPB exam-ready PDF/CSV exports)</li>
+          <li>Iceberg or Delta on the lakehouse (table format with time travel)</li>
+          <li>Cross-account orchestration (one customer · many products)</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <p style="margin-top:32px; font-size:0.92rem; color:var(--ink-500); max-width:780px;">
+      The roadmap is sequenced for compounding value: every item builds on the foundation already in place.
+      Auth + IaC + OTel turn the demo into a deployable platform. State overlays + STT close the compliance
+      gap. MLOps + RAG transform the AI agents from a feature into a flywheel.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================== FOOTER ============================================== -->
+<footer>
+  <div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div style="font-weight:700; color:white; font-size:1.05rem;">Collections Orchestration Platform</div>
+        <div style="margin-top:4px;">Capabilities brief · prepared for executive and architecture review</div>
+      </div>
+      <div style="font-size:0.78rem; color:#94a3b8;">
+        Temporal · Kafka · OPA · Anthropic Claude · AWS S3 · DuckDB · sklearn · React
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
