@@ -31,10 +31,32 @@ A Claude Code plugin that turns one successful platform engagement into a repeat
 | `narrative-summarization` | AI-generated summaries | `code/system_prompt.txt` — 9-section structure |
 | `cost-observability` | FinOps for AI | `code/ai_cost_endpoint.py` — per-day rate-card |
 
-**Two specialist subagents:**
+**Ten role-based persona agents** (the orchestration layer) — each owns a specific scope and knows which skills to invoke. The `engagement-lead` coordinates the others:
 
-- `engagement-discoverer` — runs the variability questionnaire interactively
-- `mock-auditor` — does a thorough multi-file mock hunt across a codebase
+| Persona | What they own |
+|---|---|
+| `engagement-lead` | **Orchestrator.** Spawns other personas, drives `/engagement-*` commands, owns the demo flow + brief + roadmap |
+| `solution-architect` | System design, orchestration boundary contract, architecture diagram |
+| `cloud-engineer` | Deployment, IaC, secrets, networking, cost guardrails |
+| `data-engineer` | Event spine, OLTP schemas, medallion lakehouse, lineage endpoint |
+| `compliance-engineer` | Policy engine with regulatory citations, WORM audit triggers |
+| `ai-engineer` | AI agent harness, structured decisions, prompts, narrative gen, cost tracking |
+| `ml-engineer` | Feature store, trained models, online scoring, roll-rate forecasting |
+| `risk-engineer` | Champion/challenger framework, A/B significance, recovery curves |
+| `frontend-engineer` | Stakeholder UI surfaces (one page per persona), component library |
+| `sre-engineer` | Service heartbeats, Kafka topology, traces, Platform Operations UI |
+
+Personas collaborate via four canonical patterns (see `docs/orchestration-patterns.md`):
+
+- **Pattern A — Bootstrap:** engagement-lead spawns the technical personas in waves (architect → cloud → data + compliance in parallel → ai → frontend)
+- **Pattern B — Add a capability:** lead routes to the owning persona + supporting personas
+- **Pattern C — Demo prep:** lead drives the rituals; each persona reviews their section of the brief
+- **Pattern D — Audit & remediate:** lead runs `/engagement-audit`, routes each finding to the owning persona
+
+**Two utility subagents:**
+
+- `engagement-discoverer` — runs the variability questionnaire interactively (used by engagement-lead during /engagement-init)
+- `mock-auditor` — does a thorough multi-file mock hunt across a codebase (used by engagement-lead during /engagement-audit)
 
 **Five artifact templates** that the slash commands populate:
 

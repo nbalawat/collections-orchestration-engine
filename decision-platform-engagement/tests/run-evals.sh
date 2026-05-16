@@ -204,6 +204,10 @@ for agent in manifest.get("agents", []):
     p = os.path.join("${PLUGIN_DIR}", agent["file"])
     if not os.path.exists(p):
         missing.append(("agent", agent["name"], agent["file"]))
+for persona in manifest.get("personas", []):
+    p = os.path.join("${PLUGIN_DIR}", persona["file"])
+    if not os.path.exists(p):
+        missing.append(("persona", persona["name"], persona["file"]))
 for tmpl in manifest.get("templates", []):
     p = os.path.join("${PLUGIN_DIR}", tmpl)
     if not os.path.exists(p):
@@ -275,7 +279,14 @@ run_structural() {
 
   hdr "Structural · agents"
   for agent_file in "${PLUGIN_DIR}"/agents/*.md; do
+    [[ -f "${agent_file}" ]] || continue
     test_agent_structural "${agent_file}"
+  done
+
+  hdr "Structural · personas"
+  for persona_file in "${PLUGIN_DIR}"/agents/personas/*.md; do
+    [[ -f "${persona_file}" ]] || continue
+    test_agent_structural "${persona_file}"
   done
 
   hdr "Structural · templates"

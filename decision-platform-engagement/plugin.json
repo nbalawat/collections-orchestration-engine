@@ -39,6 +39,18 @@
     { "name": "engagement-discoverer",    "file": "agents/engagement-discoverer.md", "description": "Interactive discovery — walks the user through the variability questionnaire and produces an engagement profile" },
     { "name": "mock-auditor",             "file": "agents/mock-auditor.md",          "description": "Deep audit of a codebase to find every hidden mock, stub, fake, or hardcoded fallback inside the orchestration boundary" }
   ],
+  "personas": [
+    { "name": "engagement-lead",     "file": "agents/personas/engagement-lead.md",     "description": "Orchestrator — coordinates the engagement end-to-end, spawns other personas, drives /engagement-* commands, owns the demo flow and brief" },
+    { "name": "solution-architect",  "file": "agents/personas/solution-architect.md",  "description": "Designs the system. Owns architecture diagram and the orchestration boundary contract" },
+    { "name": "cloud-engineer",      "file": "agents/personas/cloud-engineer.md",      "description": "Deployment, IaC, secrets, environments, cost guardrails" },
+    { "name": "data-engineer",       "file": "agents/personas/data-engineer.md",       "description": "Event spine, OLTP schema, medallion lakehouse, lineage" },
+    { "name": "compliance-engineer", "file": "agents/personas/compliance-engineer.md", "description": "Encodes regulations as policy code with citations. Owns OPA policies and WORM audit triggers" },
+    { "name": "ai-engineer",         "file": "agents/personas/ai-engineer.md",         "description": "Governed AI agents with structured decisions, prompts, narrative generation, cost tracking" },
+    { "name": "ml-engineer",         "file": "agents/personas/ml-engineer.md",         "description": "Feature store, model training, online scoring, roll-rate forecasting" },
+    { "name": "risk-engineer",       "file": "agents/personas/risk-engineer.md",       "description": "Champion/challenger A/B framework, statistical significance, recovery curves, portfolio KPIs" },
+    { "name": "frontend-engineer",   "file": "agents/personas/frontend-engineer.md",   "description": "Stakeholder UI surfaces (one per persona). Component library, design system, markdown rendering" },
+    { "name": "sre-engineer",        "file": "agents/personas/sre-engineer.md",        "description": "Observability — heartbeats, traces, Kafka topology, consumer lag, runbook" }
+  ],
   "templates": [
     "templates/stakeholder-brief.html",
     "templates/architecture-diagram.txt",
@@ -56,6 +68,7 @@
     "docs/methodology.md",
     "docs/variability-dimensions.md",
     "docs/stakeholder-archetypes.md",
-    "docs/case-study-collections.md"
+    "docs/case-study-collections.md",
+    "docs/orchestration-patterns.md"
   ]
 }
