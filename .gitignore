@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+.env
+
+# Node
+node_modules/
+web/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Docker
+docker/temporal/dynamicconfig/
+
+# Data (regenerated)
+data/seed/*.json
+
+# OS
+.DS_Store
+Thumbs.db

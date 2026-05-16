@@ -1,0 +1,42 @@
+{
+  "collections": {
+    "config": {
+      "strategy_version": "v1.0.0",
+      "effective_date": "2026-05-01",
+      "settlement_thresholds": {
+        "late": 0.60,
+        "severe": 0.40,
+        "pre_charge_off": 0.35
+      },
+      "frequency_caps": {
+        "sms_per_week": 3,
+        "email_per_week": 2,
+        "voice_per_day": 1,
+        "dialer_per_week": 2,
+        "total_per_week": 10
+      },
+      "quiet_hours": {
+        "start": 21,
+        "end": 8
+      },
+      "ptp_parameters": {
+        "max_days_out": 30,
+        "grace_period_hours": 24,
+        "max_broken_before_escalation": 2
+      },
+      "ai_agent_config": {
+        "confidence_threshold": 0.70,
+        "auto_execute_threshold": 0.85,
+        "max_settlement_auto_approve": 10000,
+        "escalation_intents": ["THREAT_LEGAL", "DISTRESS", "COMPLAINT"],
+        "model": "claude-sonnet-4-6"
+      },
+      "champion_challenger": {
+        "enabled": true,
+        "challenger_traffic_pct": 10,
+        "champion_version": "v1.0.0",
+        "challenger_version": "v1.1.0-beta"
+      }
+    }
+  }
+}
