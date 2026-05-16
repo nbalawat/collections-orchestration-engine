@@ -1,7 +1,9 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, Brain, Cog, Play, Radio, UserSearch, Server } from 'lucide-react'
+import { LayoutDashboard, Users, Brain, Cog, Play, Radio, UserSearch, Server, Activity } from 'lucide-react'
+import OperationsFloor from './pages/OperationsFloor'
 import CommandCenter from './pages/CommandCenter'
 import CustomerJourney from './pages/CustomerJourney'
+import CustomerStory from './pages/CustomerStory'
 import AgentDesktop from './pages/AgentDesktop'
 import AIExplorer from './pages/AIExplorer'
 import StrategyConsole from './pages/StrategyConsole'
@@ -9,13 +11,14 @@ import Scenarios from './pages/Scenarios'
 import PlatformOps from './pages/PlatformOps'
 
 const NAV = [
-  { to: '/', icon: Radio, label: 'Command Center' },
+  { to: '/', icon: Activity, label: 'Operations Floor' },
+  { to: '/command', icon: Radio, label: 'Command Center' },
   { to: '/customers', icon: UserSearch, label: 'Customer Search' },
   { to: '/agent', icon: Users, label: 'Agent Desktop' },
   { to: '/ai', icon: Brain, label: 'AI Explorer' },
   { to: '/strategy', icon: Cog, label: 'Strategy Console' },
-  { to: '/scenarios', icon: Play, label: 'Scenarios' },
   { to: '/platform', icon: Server, label: 'Platform Ops' },
+  { to: '/scenarios', icon: Play, label: 'Scenarios' },
 ]
 
 export default function App() {
@@ -52,9 +55,11 @@ export default function App() {
 
       <main className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
         <Routes>
-          <Route path="/" element={<CommandCenter />} />
+          <Route path="/" element={<OperationsFloor />} />
+          <Route path="/command" element={<CommandCenter />} />
           <Route path="/customers" element={<CustomerSearch />} />
-          <Route path="/customer/:id" element={<CustomerJourney />} />
+          <Route path="/customer/:id" element={<CustomerStory />} />
+          <Route path="/customer/:id/timeline" element={<CustomerJourney />} />
           <Route path="/agent" element={<AgentDesktop />} />
           <Route path="/ai" element={<AIExplorer />} />
           <Route path="/strategy" element={<StrategyConsole />} />

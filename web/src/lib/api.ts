@@ -83,6 +83,22 @@ export const api = {
   platformOpaDecisions: (limit = 50) => fetchJSON<{ decisions: OpaDecision[] }>(`/platform/opa/decisions?limit=${limit}`),
   platformTrace: (eventId: string) => fetchJSON<TraceResult>(`/platform/trace/${eventId}`),
   platformHealth: () => fetchJSON<PlatformHealth>('/platform/health/summary'),
+
+  // Operations Floor
+  opsPulse: () => fetchJSON<OperationsPulse>('/operations/portfolio-pulse'),
+  opsLiveJourneys: (limit = 80) => fetchJSON<{ journeys: LiveJourney[]; count: number }>(`/operations/live-journeys?limit=${limit}`),
+  opsChannelActivity: () => fetchJSON<{ channels: ChannelActivityRow[] }>('/operations/channel-activity'),
+  opsAgentActivity: (limit = 30) => fetchJSON<{ actions: AgentAction[] }>(`/operations/agent-activity?limit=${limit}`),
+  opsAgentSummary: () => fetchJSON<{ agents: AgentSummary[] }>('/operations/agent-activity/summary'),
+  opsEscalationQueue: () => fetchJSON<{ escalations: Escalation[] }>('/operations/escalation-queue'),
+  opsComplianceBlocks: (limit = 20) => fetchJSON<{ blocks: ComplianceBlock[] }>(`/operations/compliance-blocks?limit=${limit}`),
+
+  // Customer Story
+  storyNarrative: (id: string) => fetchJSON<StoryNarrative>(`/story/customers/${id}/narrative`),
+  storyTimeline: (id: string, limit = 200) => fetchJSON<{ timeline: EnrichedEvent[]; count: number }>(`/story/customers/${id}/timeline?limit=${limit}`),
+  storyDecisions: (id: string, limit = 30) => fetchJSON<{ decisions: StrategyDecisionAudit[] }>(`/story/customers/${id}/decisions?limit=${limit}`),
+  storyAgentActions: (id: string, limit = 30) => fetchJSON<{ actions: AgentAction[] }>(`/story/customers/${id}/agent-actions?limit=${limit}`),
+  storyEscalations: (id: string) => fetchJSON<{ escalations: Escalation[] }>(`/story/customers/${id}/escalations`),
 };
 
 // Types
@@ -358,4 +374,118 @@ export interface PlatformHealth {
   services_healthy: number;
   services_total: number;
   kafka_topics: number;
+}
+
+export interface OperationsPulse {
+  active_journeys: number;
+  events_last_minute: number;
+  agent_actions_5m: number;
+  pending_escalations: number;
+  compliance_blocks_1h: number;
+  stage_transitions_1h: number;
+}
+
+export interface LiveJourney {
+  customer_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  risk_score: number | null;
+  account_id: string | null;
+  delinquency_stage: string | null;
+  days_past_due: number | null;
+  current_balance: number | null;
+  total_past_due: number | null;
+  last_event_type: string | null;
+  journey_stage_hint: string | null;
+  last_activity: string;
+}
+
+export interface ChannelActivityRow {
+  channel: string;
+  direction: string;
+  count_5m: number;
+  count_1m: number;
+  unique_customers: number;
+}
+
+export interface AgentAction {
+  action_id: string;
+  agent_type: string;
+  customer_id: string;
+  action_type: string;
+  confidence: number | null;
+  rationale: string | null;
+  status: string;
+  created_at: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+export interface AgentSummary {
+  agent_type: string;
+  actions_24h: number;
+  actions_5m: number;
+  escalations_24h: number;
+  avg_confidence: number | null;
+}
+
+export interface Escalation {
+  escalation_id: string;
+  customer_id: string;
+  reason: string;
+  urgency: string;
+  specialist_type: string;
+  status: string;
+  sla_due_at: string;
+  created_at: string;
+  source_agent: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  seconds_until_sla: number;
+}
+
+export interface ComplianceBlock {
+  event_id: string;
+  customer_id: string;
+  occurred_at: string;
+  action_blocked: string | null;
+  rule_name: string | null;
+  check_type: string | null;
+  reason: string | null;
+  payload: Record<string, unknown>;
+}
+
+export interface StoryNarrative {
+  narrative: string | null;
+  fallback?: string;
+  model?: string | null;
+  tokens?: { input: number; output: number };
+  note?: string;
+  error?: string;
+}
+
+export interface EnrichedEvent {
+  event_id: string;
+  customer_id: string;
+  event_type: string;
+  event_category: string;
+  channel: string | null;
+  direction: string | null;
+  intent: string | null;
+  payload: Record<string, unknown>;
+  source_service: string;
+  correlation_id: string | null;
+  workflow_id: string | null;
+  occurred_at: string;
+  received_at: string;
+  linked_actions: AgentAction[];
+}
+
+export interface StrategyDecisionAudit {
+  audit_id: string;
+  strategy_version: string;
+  policy_name: string;
+  input_context: Record<string, unknown>;
+  decision: Record<string, unknown>;
+  evaluated_at: string;
 }
