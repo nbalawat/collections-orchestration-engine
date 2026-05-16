@@ -125,6 +125,19 @@ export const api = {
   }),
   lakehouseLineage: (eventId: string) => fetchJSON<EventLineage>(`/lakehouse/lineage/${eventId}`),
   lakehouseLineageSuggestions: (limit = 12) => fetchJSON<{ suggestions: LineageSuggestion[] }>(`/lakehouse/lineage-suggestions?limit=${limit}`),
+
+  // Risk & ML
+  riskFeatureCatalog: () => fetchJSON<{ features: FeatureCatalogEntry[] }>('/risk/features/catalog'),
+  riskCustomerFeatures: (id: string) => fetchJSON<CustomerFeatures>(`/risk/features/${id}`),
+  riskModelCard: () => fetchJSON<RiskModelCard>('/risk/model/card'),
+  riskRetrain: () => fetchJSON<{ status: string; training_meta: Record<string, unknown> }>('/risk/model/retrain', { method: 'POST' }),
+  riskScore: (id: string) => fetchJSON<RiskScoreResponse>(`/risk/score/${id}`),
+  riskRollRate: () => fetchJSON<RollRateResponse>('/risk/roll-rate'),
+  riskRecoveryCurves: () => fetchJSON<RecoveryCurvesResponse>('/risk/recovery-curves'),
+  riskCohortVintage: () => fetchJSON<{ cells: CohortVintageCell[] }>('/risk/cohort-vintage'),
+  riskAbSignificance: (metric: 'cure' | 'escalation' | 'engagement' = 'cure') =>
+    fetchJSON<AbSignificanceResponse>(`/risk/ab-significance?metric=${metric}`),
+  riskAiCost: () => fetchJSON<AiCostResponse>('/risk/ai-cost'),
 };
 
 // Types
@@ -620,6 +633,129 @@ export interface ActivityDigest {
   tokens?: { input: number; output: number };
   note?: string;
   error?: string;
+}
+
+// Risk & ML types
+
+export interface FeatureCatalogEntry {
+  name: string;
+  source: string;
+  type: string;
+  doc: string;
+}
+
+export interface CustomerFeatures {
+  customer_id: string;
+  as_of: string;
+  delinquency_stage: string | null;
+  [key: string]: unknown;
+}
+
+export interface FeatureImportance {
+  feature: string;
+  importance: number;
+}
+
+export interface RiskModelCard {
+  training_meta: {
+    status: string;
+    algo?: string;
+    trained_at?: string;
+    snapshots?: number;
+    positives?: number;
+    positive_rate?: number;
+    auc?: number;
+    brier?: number;
+    n_features?: number;
+    label_definition?: string;
+    lookahead_days?: number;
+    [key: string]: unknown;
+  };
+  feature_importance: FeatureImportance[];
+  n_features: number;
+  is_real: boolean;
+}
+
+export interface RiskContributor {
+  feature: string;
+  value: number;
+  z_score: number;
+  global_importance: number;
+  local_contribution: number;
+}
+
+export interface RiskScoreResponse {
+  customer_id: string;
+  probability_worsen_7d: number;
+  risk_band: 'LOW' | 'MEDIUM' | 'HIGH';
+  model_status: string;
+  top_contributors: RiskContributor[];
+  features: CustomerFeatures;
+}
+
+export interface RollRateResponse {
+  matrix: number[][];
+  labels: string[];
+  current_state: Record<string, number>;
+  current_total: number;
+  projections: {
+    '30_day': Record<string, number>;
+    '60_day': Record<string, number>;
+    '90_day': Record<string, number>;
+  };
+  steps_per_period: { '30': number; '60': number; '90': number; daily_transition_rate: number };
+  meta: Record<string, unknown>;
+}
+
+export interface RecoveryCurveSummary {
+  entry_stage: string;
+  cohort_size: number;
+  cures: number;
+  cure_rate_pct: number;
+  avg_hours_to_cure: number;
+}
+
+export interface RecoveryCurvesResponse {
+  summary: RecoveryCurveSummary[];
+  curve_points: { entry_stage: string; hours_to_cure: number; n: number }[];
+}
+
+export interface CohortVintageCell {
+  vintage_week: string;
+  current_stage: string | null;
+  n: number;
+}
+
+export interface AbSignificanceResponse {
+  metric: string;
+  champion: { version: string; n: number; conversions: number; rate: number | null };
+  challenger: { version: string; n: number; conversions: number; rate: number | null };
+  absolute_difference?: number;
+  difference_95_ci?: [number, number];
+  lift_pct: number | null;
+  z_score?: number;
+  p_value: number | null;
+  significant_95: boolean;
+  verdict: string;
+  required_n_per_arm_for_5pct_lift_80pct_power?: number | null;
+}
+
+export interface AiCostRow {
+  day: string;
+  agent_type: string;
+  model: string;
+  invocations: number;
+  tokens: number | null;
+  avg_latency_ms: number | null;
+  max_latency_ms: number | null;
+  escalations: number;
+  estimated_cost_usd: number;
+}
+
+export interface AiCostResponse {
+  rows: AiCostRow[];
+  total_estimated_cost_usd_7d: number;
+  rate_card: Record<string, { input: number; output: number }>;
 }
 
 export interface S3Object {

@@ -31,6 +31,7 @@ from services.api.routes.platform import router as platform_router
 from services.api.routes.operations import router as operations_router
 from services.api.routes.story import router as story_router
 from services.api.routes.lakehouse import router as lakehouse_router
+from services.api.routes.risk import router as risk_router
 from services.api.ws.handler import router as ws_router
 from services.shared.config import get_settings
 
@@ -46,6 +47,12 @@ async def lifespan(app: FastAPI):
     from services.shared.db import get_db_pool
     get_db_pool()
     logger.info("Database pool initialized")
+
+    # Warm-start the risk model in the background — don't block the server.
+    import asyncio as _asyncio
+    from services.ml.risk_model import ensure_trained_background
+    _asyncio.create_task(ensure_trained_background())
+    logger.info("Risk model training kicked off in background")
 
     yield
 
@@ -79,6 +86,7 @@ app.include_router(platform_router, prefix="/api/platform", tags=["platform-ops"
 app.include_router(operations_router, prefix="/api/operations", tags=["operations-floor"])
 app.include_router(story_router, prefix="/api/story", tags=["customer-story"])
 app.include_router(lakehouse_router, prefix="/api/lakehouse", tags=["lakehouse"])
+app.include_router(risk_router, prefix="/api/risk", tags=["risk-and-ml"])
 app.include_router(ws_router)
 
 
