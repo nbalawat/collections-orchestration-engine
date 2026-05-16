@@ -1,15 +1,21 @@
-"""Lakehouse API — bronze/silver/gold topology, mart queries, ad-hoc SQL.
+"""Lakehouse API — bronze/silver/gold topology, mart queries, ad-hoc SQL, lineage.
 
 Powers the "Data Lakehouse" UI page. All counters and listings come from real
 AWS S3 (bronze, silver, gold buckets). Ad-hoc SQL is executed against silver +
 gold Parquet via an embedded DuckDB connection with the httpfs extension.
+
+The lineage endpoint takes one event_id and walks every tier — Kafka, Postgres,
+Redis, S3 bronze, S3 silver, gold marts, downstream agent_actions — to prove the
+same business event materializes at every layer.
 """
 from __future__ import annotations
 
 import asyncio
+import gzip
 import json
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import aioboto3
@@ -18,6 +24,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from services.shared.config import get_settings
+from services.shared.db import execute_query
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -324,3 +331,309 @@ def _serialize_rows(rows: list[dict]) -> list[dict]:
                 nr[k] = v
         out.append(nr)
     return out
+
+
+# ─── Data Lineage ──────────────────────────────────────────────────────
+# Maps event_category (as stored in Postgres) to the Kafka topic + bronze partition.
+
+CATEGORY_TO_TOPIC = {
+    "channel": "interactions.normalized",
+    "interaction": "interactions.normalized",
+    "decision": "events.decisions",
+    "action": "events.actions",
+    "lifecycle": "events.lifecycle",
+    "compliance": "events.compliance",
+    "ai_reasoning": "events.ai.reasoning",
+    "ai_quality": "events.ai.quality",
+    "note": "interactions.normalized",
+}
+
+
+# Which gold marts a row of this topic contributes to, and which columns it bumps.
+# This is the "downstream pull" — for any given event the lineage shows which
+# aggregates count it.
+def _compute_gold_contributions(topic: str, direction: str | None) -> list[dict]:
+    out: list[dict] = []
+    if topic == "interactions.normalized":
+        cols = ["interactions"]
+        if direction == "inbound":
+            cols.append("inbound")
+        elif direction == "outbound":
+            cols.append("outbound")
+        out.append({
+            "mart": "customer_360",
+            "columns": cols,
+            "note": "contributes to per-customer interaction counts",
+        })
+        out.append({
+            "mart": "portfolio_daily",
+            "columns": ["interactions"] + ([f"{direction}_interactions"] if direction in ("inbound", "outbound") else []),
+            "note": "contributes to daily portfolio interaction totals",
+        })
+    elif topic == "events.decisions":
+        out.append({
+            "mart": "customer_360",
+            "columns": ["strategy_evaluations", "latest_strategy_version"],
+            "note": "increments evaluation count; updates latest_strategy_version if this is the latest",
+        })
+        out.append({
+            "mart": "portfolio_daily",
+            "columns": ["strategy_evaluations"],
+            "note": "rolls up into the day's evaluation count",
+        })
+        out.append({
+            "mart": "strategy_performance",
+            "columns": ["evaluations", "unique_customers", "last_seen"],
+            "note": "contributes to the customer's assigned strategy_version row",
+        })
+    elif topic == "events.actions":
+        out.append({
+            "mart": "customer_360",
+            "columns": ["actions_dispatched"],
+            "note": "increments per-customer dispatch count",
+        })
+        out.append({
+            "mart": "portfolio_daily",
+            "columns": ["actions_dispatched"],
+            "note": "rolls up into daily dispatch volume",
+        })
+    elif topic == "events.compliance":
+        out.append({
+            "mart": "customer_360",
+            "columns": ["compliance_evaluations", "compliance_allowed", "compliance_blocked"],
+            "note": "increments per-customer compliance evaluation counts (split by passed)",
+        })
+        out.append({
+            "mart": "portfolio_daily",
+            "columns": ["compliance_evaluations", "compliance_blocked"],
+            "note": "daily compliance gate volume",
+        })
+        out.append({
+            "mart": "compliance_audit_daily",
+            "columns": ["allowed", "blocked", "total"],
+            "note": "row keyed by (day, check_type, rule_name)",
+        })
+    elif topic == "events.lifecycle":
+        out.append({
+            "mart": "customer_360",
+            "columns": ["stage_transitions"],
+            "note": "increments per-customer transition count",
+        })
+        out.append({
+            "mart": "portfolio_daily",
+            "columns": ["stage_transitions"],
+            "note": "rolls up into daily transition volume",
+        })
+    return out
+
+
+@router.get("/lineage/{event_id}")
+async def event_lineage(event_id: str):
+    """Walk every tier where this event materializes.
+
+    Returns a structured per-tier view: Kafka (topic, key), Postgres row + WORM
+    status, Redis channels, S3 bronze (exact gzipped JSONL key AND the line
+    inside it), S3 silver (queried via DuckDB), gold mart contributions
+    (computed), downstream rows (agent_actions, strategy_audit_log, escalations
+    sharing the correlation_id).
+    """
+    s = get_settings()
+
+    # ── 1. Postgres ──
+    rows = await execute_query("""
+        SELECT event_id, customer_id, account_id, workflow_id, channel, direction,
+               event_type, event_category, intent, payload, correlation_id,
+               source_service, occurred_at, received_at
+        FROM customer_events WHERE event_id::text = :eid
+        LIMIT 1
+    """, {"eid": event_id})
+    if not rows:
+        raise HTTPException(404, f"event_id {event_id} not found in Postgres")
+    pg_row = rows[0]
+
+    occurred_str = str(pg_row.get("occurred_at") or "")
+    try:
+        occurred_dt = datetime.fromisoformat(occurred_str.replace("Z", "+00:00"))
+    except ValueError:
+        occurred_dt = datetime.now(timezone.utc)
+    date_part = occurred_dt.strftime("%Y-%m-%d")
+    hour_part = occurred_dt.strftime("%H")
+
+    category = pg_row.get("event_category") or ""
+    topic = CATEGORY_TO_TOPIC.get(category, "interactions.normalized")
+    customer_id = pg_row.get("customer_id") or ""
+    correlation_id = str(pg_row.get("correlation_id") or "") or None
+
+    kafka_info = {
+        "topic": topic,
+        "key": customer_id,
+        "key_purpose": "Kafka uses customer_id as the message key so all events for a customer "
+                       "stay on the same partition and remain ordered",
+        "topic_partitions": 3,
+        "retention_hours": 168,
+    }
+
+    postgres_info = {
+        "database": s.postgres_db,
+        "table": "customer_events",
+        "primary_key": pg_row.get("event_id"),
+        "row": pg_row,
+        "audit_status": "WORM_PROTECTED",
+        "audit_note": "audit_immutable() trigger raises on UPDATE/DELETE; original row stays intact",
+    }
+
+    redis_info = {
+        "channels": [f"events:{customer_id}", "events:all"] if customer_id else ["events:all"],
+        "purpose": "fan-out to WebSocket subscribers (live UI updates)",
+        "ttl": "none — pub/sub is fire-and-forget; not stored",
+    }
+
+    # ── 2. Bronze ── search for the exact JSONL object containing this event_id
+    bronze_info: dict[str, Any] = {
+        "bucket": s.lakehouse_bronze_bucket,
+        "partition": f"topic={topic}/date={date_part}/hour={hour_part}/",
+        "found": False,
+    }
+    silver_info: dict[str, Any] = {
+        "bucket": s.lakehouse_silver_bucket,
+        "partition_pattern": f"topic={topic}/date={date_part}/part-*.parquet",
+        "found": False,
+    }
+
+    if s.lakehouse_bronze_bucket:
+        async with _session.client("s3", region_name=s.lakehouse_s3_region) as s3:
+            objs = await _list_objects(s3, s.lakehouse_bronze_bucket, prefix=bronze_info["partition"])
+            for obj in objs:
+                if not obj["key"].endswith(".jsonl.gz"):
+                    continue
+                try:
+                    got = await s3.get_object(Bucket=s.lakehouse_bronze_bucket, Key=obj["key"])
+                    body = await got["Body"].read()
+                    text = gzip.decompress(body).decode("utf-8")
+                    lines = text.splitlines()
+                    for i, line in enumerate(lines):
+                        try:
+                            rec = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if rec.get("event_id") == event_id:
+                            bronze_info.update({
+                                "found": True,
+                                "key": obj["key"],
+                                "object_size_bytes": int(obj["size"]),
+                                "events_in_file": len(lines),
+                                "line_number": i + 1,
+                                "raw_record": rec,
+                                "ingested_at": rec.get("_ingested_at"),
+                                "compression": "gzip",
+                                "format": "ndjson",
+                            })
+                            break
+                    if bronze_info["found"]:
+                        break
+                except Exception:
+                    logger.exception("Failed to scan bronze object %s", obj["key"])
+
+    # ── 3. Silver ── DuckDB SELECT WHERE event_id = ?
+    if s.lakehouse_silver_bucket:
+        silver_pattern = f"s3://{s.lakehouse_silver_bucket}/{silver_info['partition_pattern']}"
+
+        def _query_silver() -> tuple[dict | None, str | None]:
+            try:
+                con = _get_duck()
+                cur = con.execute(
+                    f"SELECT * FROM read_parquet('{silver_pattern}') WHERE event_id = ?",
+                    [event_id],
+                )
+                table = cur.to_arrow_table()
+                rows = _serialize_rows(table.to_pylist())
+                return (rows[0] if rows else None, None)
+            except Exception as ex:
+                return (None, str(ex))
+
+        async with _duck_lock:
+            row, err = await asyncio.to_thread(_query_silver)
+        if row:
+            silver_info.update({
+                "found": True,
+                "row": row,
+                "row_format": "parquet, snappy-compressed",
+                "schema_note": "explicit pyarrow schema; payload preserved as payload_json",
+            })
+        elif err:
+            silver_info["error"] = err
+
+    # ── 4. Gold contributions (computed) ──
+    direction = pg_row.get("direction")
+    gold_info = {
+        "bucket": s.lakehouse_gold_bucket,
+        "contributions": _compute_gold_contributions(topic, direction),
+        "note": "Gold marts are aggregations — this event contributes to the counts/sums but isn't stored verbatim.",
+    }
+
+    # ── 5. Downstream rows sharing the correlation_id ──
+    downstream_info: dict[str, Any] = {
+        "correlation_id": correlation_id,
+        "agent_actions": [],
+        "strategy_audit": [],
+        "escalations": [],
+        "related_events": [],
+    }
+    if correlation_id:
+        downstream_info["agent_actions"] = await execute_query("""
+            SELECT action_id, agent_type, action_type, confidence, status, rationale, created_at
+            FROM agent_actions WHERE trace_id::text = :cid
+            ORDER BY created_at LIMIT 10
+        """, {"cid": correlation_id})
+
+        downstream_info["related_events"] = await execute_query("""
+            SELECT event_id, event_type, event_category, source_service, occurred_at
+            FROM customer_events WHERE correlation_id::text = :cid AND event_id::text != :eid
+            ORDER BY occurred_at LIMIT 20
+        """, {"cid": correlation_id, "eid": event_id})
+
+    if customer_id:
+        downstream_info["escalations"] = await execute_query("""
+            SELECT escalation_id, reason, urgency, status, created_at
+            FROM human_escalations WHERE customer_id = :cid
+              AND created_at BETWEEN :start AND :end
+            ORDER BY created_at LIMIT 5
+        """, {
+            "cid": customer_id,
+            "start": occurred_dt,
+            "end": occurred_dt.replace(hour=23, minute=59, second=59),
+        })
+
+    return {
+        "event_id": event_id,
+        "correlation_id": correlation_id,
+        "customer_id": customer_id,
+        "topic": topic,
+        "occurred_at": occurred_str,
+        "tiers": {
+            "kafka": kafka_info,
+            "postgres": postgres_info,
+            "redis": redis_info,
+            "bronze": bronze_info,
+            "silver": silver_info,
+            "gold": gold_info,
+        },
+        "downstream": downstream_info,
+    }
+
+
+@router.get("/lineage-suggestions")
+async def lineage_suggestions(limit: int = 12):
+    """Recent event_ids with rich downstream activity — for the lineage picker UI."""
+    rows = await execute_query("""
+        SELECT ce.event_id, ce.customer_id, ce.event_type, ce.event_category,
+               ce.occurred_at, ce.correlation_id,
+               (SELECT COUNT(*) FROM agent_actions aa
+                WHERE aa.trace_id::text = ce.correlation_id::text) AS linked_agent_actions
+        FROM customer_events ce
+        WHERE ce.occurred_at > NOW() - INTERVAL '1 hour'
+          AND ce.correlation_id IS NOT NULL
+        ORDER BY linked_agent_actions DESC, ce.occurred_at DESC
+        LIMIT :limit
+    """, {"limit": limit})
+    return {"suggestions": rows}

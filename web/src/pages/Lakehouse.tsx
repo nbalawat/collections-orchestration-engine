@@ -8,6 +8,7 @@ import {
   Database, Layers, Activity, Play, RefreshCw, ArrowRight,
   Archive, Filter, BarChart3, Hash,
 } from 'lucide-react'
+import { DataLineage } from '@/components/DataLineage'
 
 function formatBytes(b: number): string {
   if (!b) return '0 B'
@@ -183,6 +184,8 @@ export default function Lakehouse() {
             <span>Kafka spine → Lake Sink (group <code>lake-sink-bronze</code>) writes gzipped JSONL hourly; Silver Compactor reads bronze, dedupes by event_id, writes Parquet; Gold Builder runs DuckDB SQL across silver to produce curated marts.</span>
           </div>
         </section>
+
+        <DataLineage />
 
         <section className="grid grid-cols-2 gap-6">
           <div>

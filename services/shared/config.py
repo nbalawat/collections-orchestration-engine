@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     def postgres_dsn_sync(self) -> str:
         return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
-    model_config = {"env_prefix": "COLLECTIONS_", "env_file": ".env"}
+    model_config = {"env_prefix": "COLLECTIONS_", "env_file": ".env", "extra": "ignore"}
 
 
 @lru_cache

@@ -112,6 +112,8 @@ export const api = {
   lakehouseQuery: (sql: string, limit = 100) => fetchJSON<QueryResult>('/lakehouse/query', {
     method: 'POST', body: JSON.stringify({ sql, limit }),
   }),
+  lakehouseLineage: (eventId: string) => fetchJSON<EventLineage>(`/lakehouse/lineage/${eventId}`),
+  lakehouseLineageSuggestions: (limit = 12) => fetchJSON<{ suggestions: LineageSuggestion[] }>(`/lakehouse/lineage-suggestions?limit=${limit}`),
 };
 
 // Types
@@ -591,6 +593,97 @@ export interface QueryResult {
   rows: Record<string, unknown>[];
   columns: string[];
   elapsed_ms: number;
+}
+
+export interface LineageSuggestion {
+  event_id: string;
+  customer_id: string;
+  event_type: string;
+  event_category: string;
+  occurred_at: string;
+  correlation_id: string | null;
+  linked_agent_actions: number;
+}
+
+export interface LineageTierKafka {
+  topic: string;
+  key: string;
+  key_purpose: string;
+  topic_partitions: number;
+  retention_hours: number;
+}
+
+export interface LineageTierPostgres {
+  database: string;
+  table: string;
+  primary_key: string;
+  row: Record<string, unknown>;
+  audit_status: string;
+  audit_note: string;
+}
+
+export interface LineageTierRedis {
+  channels: string[];
+  purpose: string;
+  ttl: string;
+}
+
+export interface LineageTierBronze {
+  bucket: string;
+  partition: string;
+  found: boolean;
+  key?: string;
+  object_size_bytes?: number;
+  events_in_file?: number;
+  line_number?: number;
+  raw_record?: Record<string, unknown>;
+  ingested_at?: string;
+  compression?: string;
+  format?: string;
+}
+
+export interface LineageTierSilver {
+  bucket: string;
+  partition_pattern: string;
+  found: boolean;
+  row?: Record<string, unknown>;
+  row_format?: string;
+  schema_note?: string;
+  error?: string;
+}
+
+export interface LineageGoldContribution {
+  mart: string;
+  columns: string[];
+  note: string;
+}
+
+export interface LineageTierGold {
+  bucket: string;
+  contributions: LineageGoldContribution[];
+  note: string;
+}
+
+export interface EventLineage {
+  event_id: string;
+  correlation_id: string | null;
+  customer_id: string;
+  topic: string;
+  occurred_at: string;
+  tiers: {
+    kafka: LineageTierKafka;
+    postgres: LineageTierPostgres;
+    redis: LineageTierRedis;
+    bronze: LineageTierBronze;
+    silver: LineageTierSilver;
+    gold: LineageTierGold;
+  };
+  downstream: {
+    correlation_id: string | null;
+    agent_actions: Record<string, unknown>[];
+    related_events: Record<string, unknown>[];
+    escalations: Record<string, unknown>[];
+  };
 }
 
 export interface StrategyDecisionAudit {

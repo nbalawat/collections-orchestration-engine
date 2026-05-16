@@ -17,6 +17,7 @@ from typing import Any
 from anthropic import AsyncAnthropic
 from fastapi import APIRouter, HTTPException
 
+from services.shared.anthropic_client import make_async_client
 from services.shared.db import execute_query
 
 logger = logging.getLogger(__name__)
@@ -179,7 +180,7 @@ async def customer_narrative(customer_id: str):
             "note": "ANTHROPIC_API_KEY not set — returning structured summary instead",
         }
 
-    client = AsyncAnthropic(api_key=api_key)
+    client = make_async_client()
     system = (
         "You are summarizing a customer's collections journey for a senior collections manager. "
         "Write a concise markdown brief with the following structure:\n\n"
@@ -467,7 +468,7 @@ async def customer_activity_digest(customer_id: str, window: str = "7d"):
         f"```json\n{json.dumps(context, default=str, indent=2)[:32000]}\n```"
     )
 
-    client = AsyncAnthropic(api_key=api_key)
+    client = make_async_client()
     try:
         msg = await client.messages.create(
             model="claude-opus-4-7",

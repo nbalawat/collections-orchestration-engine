@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from anthropic import AsyncAnthropic
 
 from events.models import AIReasoningTraceEvent, ReasoningStep, AgentType
+from services.shared.anthropic_client import make_async_client
 from services.shared.db import execute_insert
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class CollectionsAgent:
     max_tokens: int = 4096
 
     def __init__(self):
-        self.client = AsyncAnthropic()
+        self.client = make_async_client()
 
     def get_system_prompt(self) -> str:
         raise NotImplementedError

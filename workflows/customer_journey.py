@@ -6,8 +6,13 @@ payments, compliance signals, and strategy updates.
 """
 from __future__ import annotations
 
+import os
 import uuid
 from datetime import datetime, timedelta
+
+# Disable auto-fired agent calls when running on a rate-limited Claude Code OAuth
+# token. Manual invocations from the UI + narrative + digest still work.
+_AUTO_INVOKE = os.environ.get("AI_AUTO_INVOKE_ENABLED", "true").lower() in ("1", "true", "yes", "on")
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -204,7 +209,8 @@ class CustomerJourney:
         # the digital channel agent. The agent persists its decision to
         # agent_actions and emits a reasoning trace.
         if (
-            evt.direction == "inbound"
+            _AUTO_INVOKE
+            and evt.direction == "inbound"
             and evt.intent in {"HARDSHIP", "DISPUTE", "DISTRESS", "PTP",
                                "SETTLEMENT_INQUIRY", "REFUSAL_TO_PAY", "COMPLAINT"}
         ):
@@ -228,7 +234,7 @@ class CustomerJourney:
                 pass  # AI failure shouldn't block the rest of the workflow
 
         # Auto-trigger quality/compliance review on completed voice calls.
-        if evt.channel == "voice" and evt.event_type in ("call_connected_rpc", "call_completed"):
+        if _AUTO_INVOKE and evt.channel == "voice" and evt.event_type in ("call_connected_rpc", "call_completed"):
             transcript = ""
             if isinstance(evt.payload, dict):
                 transcript = str(evt.payload.get("transcript") or evt.payload.get("text") or "")
