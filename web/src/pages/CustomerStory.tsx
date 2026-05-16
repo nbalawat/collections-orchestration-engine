@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 import { Markdown } from '@/components/Markdown'
 import type {
   EnrichedEvent, StoryNarrative, StrategyDecisionAudit,
-  AgentAction, Escalation, Customer360,
+  AgentAction, Escalation, Customer360, ActivityDigest, DigestHighlight,
 } from '@/lib/api'
 import {
   formatCurrency, formatNumber, formatDateTime, formatTime,
@@ -14,6 +14,7 @@ import {
 import {
   ArrowLeft, Brain, Shield, AlertTriangle, Activity, CheckCircle,
   ChevronDown, ChevronRight, Sparkles, Zap, Phone, FileText, Cpu, Clock,
+  RefreshCw, Calendar,
 } from 'lucide-react'
 
 function Pulse({ label, value, sub, tone = 'default' }: {
@@ -72,6 +73,132 @@ function NarrativeCard({ id }: { id: string }) {
           {data.tokens.input}+{data.tokens.output} tokens
         </div>
       )}
+    </div>
+  )
+}
+
+const WINDOWS = [
+  { id: '24h', label: 'Last 24 hours' },
+  { id: '7d', label: 'Last 7 days' },
+  { id: '30d', label: 'Last 30 days' },
+  { id: '90d', label: 'Last 90 days' },
+  { id: 'all', label: 'All time' },
+]
+
+function severityClass(sev: string): string {
+  switch (sev) {
+    case 'critical': return 'bg-red-100 text-red-800 border-red-300'
+    case 'high': return 'bg-amber-100 text-amber-800 border-amber-300'
+    case 'medium': return 'bg-blue-100 text-blue-800 border-blue-300'
+    default: return 'bg-slate-100 text-slate-700 border-slate-300'
+  }
+}
+
+function dimensionIcon(dim: string) {
+  switch (dim) {
+    case 'compliance': return <Shield size={11} />
+    case 'risk': return <AlertTriangle size={11} />
+    case 'operations': return <Activity size={11} />
+    case 'ai': return <Brain size={11} />
+    case 'profile': return <FileText size={11} />
+    default: return null
+  }
+}
+
+function ActivityDigestCard({ id }: { id: string }) {
+  const [window, setWindow] = useState('7d')
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['story-activity-digest', id, window],
+    queryFn: () => api.storyActivityDigest(id, window),
+    staleTime: 120_000,
+  })
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl">
+      <div className="px-5 py-3 border-b border-slate-200 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Sparkles size={18} className="text-purple-600" />
+          <h2 className="text-sm font-bold text-slate-800">Activity Digest</h2>
+          <span className="text-xs text-slate-500">multi-dimensional AI summary</span>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Calendar size={12} className="text-slate-400" />
+          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+            {WINDOWS.map((w) => (
+              <button
+                key={w.id}
+                onClick={() => setWindow(w.id)}
+                className={`text-[11px] px-2 py-1 rounded ${
+                  window === w.id ? 'bg-white shadow-sm text-slate-800 font-medium' :
+                  'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                {w.label}
+              </button>
+            ))}
+          </div>
+          <button
+            className="text-[11px] text-slate-500 hover:text-slate-700 flex items-center gap-1 px-2 py-1 rounded hover:bg-slate-100"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw size={11} className={isFetching ? 'animate-spin' : ''} />
+            refresh
+          </button>
+          {data?.model && (
+            <span className="badge badge-purple text-[10px]">{data.model}</span>
+          )}
+        </div>
+      </div>
+
+      {(data?.highlights?.length ?? 0) > 0 && (
+        <div className="px-5 py-3 border-b border-slate-100 flex flex-wrap gap-2">
+          {(data?.highlights ?? []).map((h: DigestHighlight, i: number) => (
+            <div key={i} className={`flex items-center gap-2 border rounded-full px-3 py-1 text-xs ${severityClass(h.severity)}`}>
+              <span className="flex items-center gap-1 opacity-80">
+                {dimensionIcon(h.dimension)}
+                <span className="text-[10px] uppercase tracking-wider font-semibold">{h.dimension}</span>
+              </span>
+              <span className="opacity-60">·</span>
+              <span>{h.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="px-5 py-4">
+        {isLoading && (
+          <div className="space-y-2">
+            <div className="h-3 bg-slate-200/60 rounded animate-pulse" />
+            <div className="h-3 bg-slate-200/60 rounded animate-pulse w-5/6" />
+            <div className="h-3 bg-slate-200/60 rounded animate-pulse w-4/6" />
+            <div className="h-3 bg-slate-200/60 rounded animate-pulse w-3/6" />
+            <p className="text-xs text-slate-400 italic mt-3">
+              Synthesizing across {data?.context_size?.agent_actions ?? '?'} agent actions, {data?.context_size?.compliance_evaluations ?? '?'} compliance evaluations, {data?.context_size?.strategy_decisions ?? '?'} strategy decisions…
+            </p>
+          </div>
+        )}
+        {isError && <p className="text-sm text-red-600">Failed to load digest.</p>}
+        {data?.summary && <Markdown variant="narrative">{data.summary}</Markdown>}
+        {!data?.summary && data?.fallback && (
+          <>
+            <Markdown variant="narrative">{data.fallback}</Markdown>
+            {data.note && <p className="text-[11px] text-slate-500 mt-2 italic">{data.note}</p>}
+            {data.error && <p className="text-[11px] text-red-600 mt-2">Error: {data.error}</p>}
+          </>
+        )}
+
+        {data && (
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+            <span>
+              context: {data.context_size?.channel_buckets ?? 0} channel groups · {data.context_size?.stage_transitions ?? 0} transitions · {data.context_size?.agent_actions ?? 0} AI actions · {data.context_size?.strategy_decisions ?? 0} decisions · {data.context_size?.compliance_evaluations ?? 0} compliance evals · {data.context_size?.escalations ?? 0} escalations · {data.context_size?.ptps ?? 0} PTPs
+            </span>
+            {data.tokens && (
+              <span>{data.tokens.input}+{data.tokens.output} tokens · as of {new Date(data.as_of).toLocaleTimeString()}</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -353,6 +480,8 @@ export default function CustomerStory() {
       </div>
 
       <NarrativeCard id={customerId} />
+
+      <ActivityDigestCard id={customerId} />
 
       <div className="grid grid-cols-4 gap-3">
         <Pulse label="Events" value={eventCount} sub="full history" />

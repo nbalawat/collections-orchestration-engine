@@ -100,6 +100,7 @@ export const api = {
   storyDecisions: (id: string, limit = 30) => fetchJSON<{ decisions: StrategyDecisionAudit[] }>(`/story/customers/${id}/decisions?limit=${limit}`),
   storyAgentActions: (id: string, limit = 30) => fetchJSON<{ actions: AgentAction[] }>(`/story/customers/${id}/agent-actions?limit=${limit}`),
   storyEscalations: (id: string) => fetchJSON<{ escalations: Escalation[] }>(`/story/customers/${id}/escalations`),
+  storyActivityDigest: (id: string, window: string = '7d') => fetchJSON<ActivityDigest>(`/story/customers/${id}/activity-digest?window=${window}`),
 };
 
 // Types
@@ -499,6 +500,33 @@ export interface EnrichedEvent {
   occurred_at: string;
   received_at: string;
   linked_actions: AgentAction[];
+}
+
+export interface DigestHighlight {
+  dimension: 'compliance' | 'risk' | 'operations' | 'ai' | 'profile' | string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  text: string;
+}
+
+export interface ActivityDigest {
+  window: string;
+  as_of: string;
+  summary: string | null;
+  fallback?: string;
+  highlights: DigestHighlight[];
+  context_size: {
+    channel_buckets: number;
+    stage_transitions: number;
+    agent_actions: number;
+    strategy_decisions: number;
+    compliance_evaluations: number;
+    escalations: number;
+    ptps: number;
+  };
+  model?: string | null;
+  tokens?: { input: number; output: number };
+  note?: string;
+  error?: string;
 }
 
 export interface StrategyDecisionAudit {
