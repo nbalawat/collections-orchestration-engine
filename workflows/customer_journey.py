@@ -26,7 +26,7 @@ with workflow.unsafe.imports_passed_through():
         StrategyDecision,
         StrategyUpdateSignal,
     )
-    from workflows.activities import account, strategy, compliance, dispatch, history
+    from workflows.activities import account, strategy, compliance, dispatch, history, ai_invoke
 
 
 ACTIVITY_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=1))
@@ -195,6 +195,33 @@ class CustomerJourney:
         # Inbound event seeds the trace; subsequent decisions/actions reuse it.
         if evt.correlation_id:
             self._current_trace_id = evt.correlation_id
+
+        # If an inbound customer message has an actionable intent, auto-invoke
+        # the digital channel agent. The agent persists its decision to
+        # agent_actions and emits a reasoning trace.
+        if (
+            evt.direction == "inbound"
+            and evt.intent in {"HARDSHIP", "DISPUTE", "DISTRESS", "PTP",
+                               "SETTLEMENT_INQUIRY", "REFUSAL_TO_PAY", "COMPLAINT"}
+        ):
+            message_text = ""
+            if isinstance(evt.payload, dict):
+                message_text = str(evt.payload.get("text") or evt.payload.get("transcript") or "")
+            try:
+                await workflow.execute_activity(
+                    ai_invoke.invoke_digital_channel_agent,
+                    args=[
+                        self.state.customer_id,
+                        workflow.info().workflow_id,
+                        message_text,
+                        evt.channel,
+                        evt.intent,
+                    ],
+                    start_to_close_timeout=timedelta(seconds=90),
+                    retry_policy=ACTIVITY_RETRY,
+                )
+            except Exception:
+                pass  # AI failure shouldn't block the rest of the workflow
 
         if evt.intent == "PTP":
             amount = evt.payload.get("amount", self.state.balance * 0.5)

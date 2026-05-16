@@ -3,6 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env early so activities that call Anthropic see ANTHROPIC_API_KEY.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 from temporalio.client import Client
 from temporalio.worker import Worker
@@ -10,6 +16,7 @@ from temporalio.worker import Worker
 from workflows.customer_journey import CustomerJourney
 from workflows.activities.account import lookup_account
 from workflows.activities.history import compute_contact_stats
+from workflows.activities.ai_invoke import invoke_digital_channel_agent
 from workflows.activities.strategy import evaluate_strategy
 from workflows.activities.compliance import check_compliance
 from workflows.activities.dispatch import (
@@ -45,6 +52,7 @@ async def main():
             publish_lifecycle,
             publish_compliance_event,
             publish_ai_reasoning,
+            invoke_digital_channel_agent,
         ],
     )
 
