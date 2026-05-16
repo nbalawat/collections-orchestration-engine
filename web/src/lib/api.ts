@@ -54,6 +54,17 @@ export const api = {
   evaluateFull: (input: Record<string, unknown>) =>
     fetchJSON<Record<string, unknown>>('/strategies/evaluate/full', { method: 'POST', body: JSON.stringify(input) }),
   getAuditLog: () => fetchJSON<{ audit_log: AuditEntry[] }>('/strategies/audit-log'),
+  strategySegmentMatrix: () => fetchJSON<{ cells: SegmentMatrixCell[] }>('/strategies/segment-matrix'),
+  strategyTreatmentMatrix: () => fetchJSON<{ rows: TreatmentMatrixRow[] }>('/strategies/treatment-matrix'),
+  strategyComplianceFiring: () => fetchJSON<{ reasons: ComplianceFiringRow[] }>('/strategies/compliance-firing'),
+  strategyRecentDecisions: (limit = 30) => fetchJSON<{ decisions: StrategyDecisionRow[] }>(`/strategies/recent-decisions?limit=${limit}`),
+  strategyVersionComparison: () => fetchJSON<{ versions: StrategyVersionRow[] }>('/strategies/version-comparison'),
+  strategySideBySide: (customer_input: Record<string, unknown>) =>
+    fetchJSON<{ results: SideBySideResult[] }>('/strategies/evaluate-side-by-side', {
+      method: 'POST',
+      body: JSON.stringify({ customer_input }),
+    }),
+  strategyVersionTimeline: () => fetchJSON<{ versions: StrategyVersionRow[]; daily_evaluations: { strategy_version: string; day: string; evaluations: number }[] }>('/strategies/version-timeline'),
 
   // Scenarios
   listScenarios: () => fetchJSON<{ scenarios: Scenario[] }>('/scenarios'),
@@ -256,6 +267,75 @@ export interface AuditEntry {
   changed_by: string;
   change_reason: string;
   created_at: string;
+}
+
+export interface SegmentMatrixCell {
+  dpd_bucket: string;
+  risk_tier: string;
+  value_segment: string;
+  n: number;
+  unique_customers: number;
+}
+
+export interface TreatmentMatrixRow {
+  dpd_bucket: string;
+  risk_tier: string;
+  treatment_action: string;
+  message_tone: string;
+  n: number;
+}
+
+export interface ComplianceFiringRow {
+  reason: string;
+  check_type: string;
+  action_blocked: string | null;
+  passed: boolean;
+  n: number;
+}
+
+export interface StrategyDecisionRow {
+  audit_id: string;
+  customer_id: string;
+  strategy_version: string;
+  policy_name: string;
+  dpd_bucket: string;
+  risk_tier: string;
+  value_segment: string;
+  treatment_action: string;
+  recommended_channels: unknown;
+  can_contact: string;
+  input_context: Record<string, unknown>;
+  decision: Record<string, unknown>;
+  evaluated_at: string;
+}
+
+export interface StrategyVersionRow {
+  strategy_version: string;
+  role: 'champion' | 'challenger' | 'retired' | string;
+  description: string;
+  allocation_pct: number | string;
+  activated_at: string | null;
+  retired_at: string | null;
+  assigned_customers: number;
+  customers_24h?: number;
+  evaluations_24h?: number;
+  agent_actions_24h?: number;
+  escalations_24h?: number;
+  cures_24h?: number;
+  avg_confidence?: number | null;
+  cure_rate_24h?: number | null;
+}
+
+export interface SideBySideResult {
+  strategy_version: string;
+  role: string;
+  description: string;
+  policies: {
+    segmentation: Record<string, unknown>;
+    treatment: Record<string, unknown>;
+    channel_routing: Record<string, unknown>;
+    compliance: Record<string, unknown>;
+  };
 }
 
 export interface Scenario {
