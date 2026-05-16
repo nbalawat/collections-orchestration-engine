@@ -19,6 +19,11 @@ dependencies = [
     "rich>=13.9.0",
     "faker>=33.0.0",
     "orjson>=3.10.0",
+    "aioboto3>=15.5.0",
+    "pyarrow>=24.0.0",
+    "duckdb>=1.5.2",
+    "python-dotenv>=1.2.2",
+    "pytz>=2026.2",
 ]
 
 [tool.uv]

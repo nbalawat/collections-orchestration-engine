@@ -101,6 +101,17 @@ export const api = {
   storyAgentActions: (id: string, limit = 30) => fetchJSON<{ actions: AgentAction[] }>(`/story/customers/${id}/agent-actions?limit=${limit}`),
   storyEscalations: (id: string) => fetchJSON<{ escalations: Escalation[] }>(`/story/customers/${id}/escalations`),
   storyActivityDigest: (id: string, window: string = '7d') => fetchJSON<ActivityDigest>(`/story/customers/${id}/activity-digest?window=${window}`),
+
+  // Lakehouse
+  lakehouseTopology: () => fetchJSON<LakehouseTopology>('/lakehouse/topology'),
+  lakehouseBronzeObjects: (topic?: string, limit = 50) =>
+    fetchJSON<{ bucket: string; prefix: string; objects: S3Object[] }>(`/lakehouse/bronze/objects?${topic ? `topic=${topic}&` : ''}limit=${limit}`),
+  lakehouseSilverPartitions: () => fetchJSON<{ bucket: string; partitions: SilverPartition[] }>('/lakehouse/silver/partitions'),
+  lakehouseGoldMarts: () => fetchJSON<{ bucket: string; marts: GoldMart[]; manifest: { last_run_at?: string; marts?: string[]; build_number?: number } | null }>('/lakehouse/gold/marts'),
+  lakehouseSavedQueries: () => fetchJSON<{ queries: SavedQuery[] }>('/lakehouse/queries'),
+  lakehouseQuery: (sql: string, limit = 100) => fetchJSON<QueryResult>('/lakehouse/query', {
+    method: 'POST', body: JSON.stringify({ sql, limit }),
+  }),
 };
 
 // Types
@@ -527,6 +538,59 @@ export interface ActivityDigest {
   tokens?: { input: number; output: number };
   note?: string;
   error?: string;
+}
+
+export interface S3Object {
+  key: string;
+  size: number;
+  last_modified: string;
+}
+
+export interface LakehouseTier {
+  bucket: string | null;
+  region?: string;
+  object_count: number;
+  total_bytes: number;
+  per_topic?: Record<string, { objects: number; bytes: number }>;
+  error?: string;
+}
+
+export interface LakehouseTopology {
+  tiers: {
+    bronze: LakehouseTier;
+    silver: LakehouseTier;
+    gold: LakehouseTier;
+  };
+  timestamp: number;
+}
+
+export interface SilverPartition {
+  topic: string;
+  date: string;
+  key: string;
+  size: number;
+  last_modified: string;
+  rows_hint: number;
+}
+
+export interface GoldMart {
+  mart: string;
+  row_count: number;
+  size_bytes: number;
+  objects: number;
+  sample: Record<string, unknown>[];
+}
+
+export interface SavedQuery {
+  id: string;
+  label: string;
+  sql: string;
+}
+
+export interface QueryResult {
+  rows: Record<string, unknown>[];
+  columns: string[];
+  elapsed_ms: number;
 }
 
 export interface StrategyDecisionAudit {

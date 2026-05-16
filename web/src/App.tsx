@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, Brain, Cog, Play, Radio, UserSearch, Server, Activity } from 'lucide-react'
+import { LayoutDashboard, Users, Brain, Cog, Play, Radio, UserSearch, Server, Activity, Database } from 'lucide-react'
 import OperationsFloor from './pages/OperationsFloor'
 import CommandCenter from './pages/CommandCenter'
 import CustomerJourney from './pages/CustomerJourney'
@@ -9,6 +9,7 @@ import AIExplorer from './pages/AIExplorer'
 import StrategyConsole from './pages/StrategyConsole'
 import Scenarios from './pages/Scenarios'
 import PlatformOps from './pages/PlatformOps'
+import Lakehouse from './pages/Lakehouse'
 
 const NAV = [
   { to: '/', icon: Activity, label: 'Operations Floor' },
@@ -18,6 +19,7 @@ const NAV = [
   { to: '/ai', icon: Brain, label: 'AI Explorer' },
   { to: '/strategy', icon: Cog, label: 'Strategy Console' },
   { to: '/platform', icon: Server, label: 'Platform Ops' },
+  { to: '/lakehouse', icon: Database, label: 'Data Lakehouse' },
   { to: '/scenarios', icon: Play, label: 'Scenarios' },
 ]
 
@@ -65,6 +67,7 @@ export default function App() {
           <Route path="/strategy" element={<StrategyConsole />} />
           <Route path="/scenarios" element={<Scenarios />} />
           <Route path="/platform" element={<PlatformOps />} />
+          <Route path="/lakehouse" element={<Lakehouse />} />
         </Routes>
       </main>
     </div>

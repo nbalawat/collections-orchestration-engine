@@ -30,6 +30,7 @@ from services.api.routes.scenarios import router as scenarios_router
 from services.api.routes.platform import router as platform_router
 from services.api.routes.operations import router as operations_router
 from services.api.routes.story import router as story_router
+from services.api.routes.lakehouse import router as lakehouse_router
 from services.api.ws.handler import router as ws_router
 from services.shared.config import get_settings
 
@@ -77,6 +78,7 @@ app.include_router(scenarios_router, prefix="/api/scenarios", tags=["scenarios"]
 app.include_router(platform_router, prefix="/api/platform", tags=["platform-ops"])
 app.include_router(operations_router, prefix="/api/operations", tags=["operations-floor"])
 app.include_router(story_router, prefix="/api/story", tags=["customer-story"])
+app.include_router(lakehouse_router, prefix="/api/lakehouse", tags=["lakehouse"])
 app.include_router(ws_router)
 
 

@@ -116,5 +116,8 @@ services:
         limits:
           memory: 64M
 
+  # Lakehouse storage is real AWS S3 — see .env for bucket names + region.
+  # No local object-store service is needed.
+
 volumes:
   postgres_data:
