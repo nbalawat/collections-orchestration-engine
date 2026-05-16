@@ -1,0 +1,55 @@
+External world                                          Real-time path
+─────────────                                           ────────────────
+
+{{external_sources}}                            {{simulator_layer}}
+                  │                                    │
+                  ▼                                    ▼
+                                                 ┌────────────────────────────────────────┐
+                                                 │  {{event_bus}}  ({{topic_count}} topics) │  ← canonical event spine
+                                                 │  keyed by {{partition_key}}              │
+                                                 └─┬───────────┬───────────┬──────────────┘
+                                                   │           │           │
+                              ┌────────────────────┘           │           └────────────────────┐
+                              ▼                                ▼                                ▼
+                       {{signal_bridge}}                {{event_projector}}              {{lake_sink}}
+                       ({{wf_signal_target}})           ({{oltp_target}})                ({{bronze_target}})
+                              │                                │                                │
+                              ▼                                ▼                                ▼
+              ┌──────────────────────────────┐         ┌──────────────────┐         ┌──────────────────────┐
+              │  {{workflow_engine}}         │         │  {{oltp_db}}      │         │  Bronze              │
+              │  per-{{entity}} workflow     │         │  + {{audit}}     │         │  raw {{format}}       │
+              │                              │         │  Redis pub/sub   │         │  {{partitioning}}    │
+              │  - lookup_{{entity}}         │         │  → WebSocket UI  │         │                      │
+              │  - compute_features          │         └──────────────────┘         └──────────┬───────────┘
+              │  - evaluate_strategy ──────────────► {{policy_engine}}                          │
+              │  - check_compliance  ──────────────► (with regulatory citations)               │ every {{compaction_period}}
+              │  - dispatch_action           │                                                  ▼
+              │  - invoke_ai_agent ─────────────────► {{llm_provider}}                  ┌──────────────────────┐
+              │    record_decision tool      │       ({{n_agents}} agents)              │  Silver              │
+              │  - {{lifecycle_monitors}}    │                                          │  typed Parquet,      │
+              └──────────────┬───────────────┘                                          │  deduplicated        │
+                             │                                                          └──────────┬───────────┘
+                             │ activities publish back to {{event_bus}}                            │
+                             └─────────────────────────────────────────────────────────────────────┤
+                                                                                                    │ every {{gold_period}}
+                                                                                                    ▼
+                                                                                          ┌──────────────────────┐
+                                                                                          │  Gold                │
+                                                                                          │  curated marts:      │
+                                                                                          │  {{mart_list}}       │
+                                                                                          └──────────┬───────────┘
+                                                                                                      │ {{query_engine}}
+                                                                                                      ▼
+                                                                                          ┌──────────────────────┐
+                                                                                          │  API · UI · ML       │
+                                                                                          │  feature store,      │
+                                                                                          │  risk model serving, │
+                                                                                          │  ad-hoc SQL          │
+                                                                                          └──────────────────────┘
+
+Properties:
+- Independent failure domains: {{n_consumer_groups}} consumer groups
+- At-least-once delivery; idempotent dedup at every tier
+- Replayable: drop Silver, recompact → identical Silver; replay {{event_bus}} → identical Bronze
+- Same correlation_id flows through every hop — traceable end-to-end
+- Two cost curves, one source of truth: OLTP for ops, Parquet for analytics

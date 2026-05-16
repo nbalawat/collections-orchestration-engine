@@ -1,0 +1,136 @@
+{
+  "_doc": "Per-command verification specs. For each command, defines the fixture (if any), how to invoke it, and what output files / structure to verify. The runner uses `claude -p` to invoke commands in a fresh working directory and checks the resulting files.",
+
+  "commands": {
+    "engagement-init": {
+      "fixture": null,
+      "simulated_answers": {
+        "industry": "Banking — collections",
+        "demo_buyer": "CRO",
+        "room": ["CRO", "CCO", "CTO"],
+        "ai_maturity": "neutral",
+        "regulations": ["FDCPA", "Reg F", "SOX"],
+        "stack": {
+          "workflow": "Temporal",
+          "event_bus": "Kafka",
+          "oltp": "PostgreSQL",
+          "lakehouse": "S3",
+          "policy_engine": "OPA",
+          "llm": "Anthropic direct"
+        },
+        "timeline": "6-week POC",
+        "deliverable": "laptop POC"
+      },
+      "expected_files": [
+        {
+          "path": "docs/engagement-profile.md",
+          "must_contain_sections": [
+            "Engagement profile",
+            "Stakeholders",
+            "Regulatory frame",
+            "Tech stack",
+            "Scale & timeline",
+            "Deliverable",
+            "Recommended preset",
+            "Skill emphasis",
+            "Next commands"
+          ],
+          "must_contain_strings": ["CRO", "Temporal", "PostgreSQL", "Kafka", "Reg F"]
+        }
+      ]
+    },
+
+    "engagement-audit": {
+      "fixture": "fixtures/synthetic-codebase",
+      "expected_files": [
+        {
+          "path": "docs/audit-findings.md",
+          "must_contain_sections": [
+            "Audit findings",
+            "Orchestration boundary",
+            "Critical",
+            "High",
+            "Recommended de-mock sequence"
+          ],
+          "must_find_findings_at_minimum": 5,
+          "must_reference_files": [
+            "fake_agent.py",
+            "compliance_check.py",
+            "stub_dispatcher.py",
+            "audit_log.py",
+            "channel_writer.py"
+          ]
+        }
+      ]
+    },
+
+    "engagement-stakeholders": {
+      "fixture": "fixtures/engagement-profile-bank-collections.md",
+      "fixture_install_as": "docs/engagement-profile.md",
+      "expected_files": [
+        {
+          "path": "docs/capability-matrix.md",
+          "must_contain_sections": [
+            "Capability × stakeholder proof matrix",
+            "Personas in scope",
+            "Matrix",
+            "Coverage check",
+            "Recommended demo emphasis"
+          ],
+          "min_matrix_rows": 8,
+          "must_contain_strings": ["CRO", "CCO", "CTO"]
+        }
+      ]
+    },
+
+    "engagement-demo-flow": {
+      "fixture": "fixtures/capability-matrix-bank-collections.md",
+      "fixture_install_as": "docs/capability-matrix.md",
+      "expected_files": [
+        {
+          "path": "docs/demo-flow.md",
+          "must_contain_sections": [
+            "Demo flow",
+            "Stop 1",
+            "Walk-out one-liners"
+          ],
+          "min_stops": 6
+        }
+      ]
+    },
+
+    "engagement-brief": {
+      "fixture": "fixtures/full-engagement-set",
+      "expected_files": [
+        {
+          "path": "docs/stakeholder-brief.html",
+          "must_be_valid_html": true,
+          "must_be_self_contained": true,
+          "must_contain_sections": [
+            "Executive Summary",
+            "Architecture",
+            "Platform Capabilities",
+            "Stakeholder Takeaways",
+            "Proof Matrix"
+          ]
+        }
+      ]
+    },
+
+    "engagement-roadmap": {
+      "fixture": "fixtures/full-engagement-set",
+      "expected_files": [
+        {
+          "path": "docs/roadmap.md",
+          "must_contain_sections": [
+            "Roadmap",
+            "Horizon 1",
+            "Horizon 2",
+            "Horizon 3",
+            "Sequencing rationale"
+          ]
+        }
+      ]
+    }
+  }
+}

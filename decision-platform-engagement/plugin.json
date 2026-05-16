@@ -1,0 +1,54 @@
+{
+  "name": "decision-platform-engagement",
+  "version": "0.1.0",
+  "description": "Reusable Claude Code plugin for building stakeholder-grade decision platforms in regulated industries. Captures the methodology, patterns, and artifacts proven on a bank-grade collections orchestration POC.",
+  "author": "Naveen Balawat",
+  "keywords": [
+    "engagement-method",
+    "decision-platform",
+    "orchestration",
+    "regulated-industry",
+    "stakeholder-demo",
+    "AI-governance",
+    "lakehouse",
+    "champion-challenger",
+    "compliance-as-code"
+  ],
+  "commands": [
+    { "name": "engagement-init",          "file": "commands/engagement-init.md",          "description": "Variability discovery questionnaire — captures industry, stack, regulatory frameworks, and stakeholders" },
+    { "name": "engagement-audit",         "file": "commands/engagement-audit.md",         "description": "Systematic audit of a codebase for mocks/stubs inside the orchestration boundary" },
+    { "name": "engagement-stakeholders",  "file": "commands/engagement-stakeholders.md",  "description": "Map platform capabilities onto the specific stakeholders in the room" },
+    { "name": "engagement-demo-flow",     "file": "commands/engagement-demo-flow.md",     "description": "Produce an N-minute demo flow tailored to the engagement profile" },
+    { "name": "engagement-brief",         "file": "commands/engagement-brief.md",         "description": "Generate a self-contained stakeholder brief HTML for executive/architecture review" },
+    { "name": "engagement-roadmap",       "file": "commands/engagement-roadmap.md",       "description": "Generate a 3-horizon roadmap (4 weeks / 3 months / 9 months) from current state" }
+  ],
+  "skills": [
+    { "name": "mock-audit",               "path": "skills/mock-audit/SKILL.md" },
+    { "name": "structured-ai-decisions",  "path": "skills/structured-ai-decisions/SKILL.md" },
+    { "name": "medallion-lakehouse",      "path": "skills/medallion-lakehouse/SKILL.md" },
+    { "name": "compliance-as-policy",     "path": "skills/compliance-as-policy/SKILL.md" },
+    { "name": "worm-audit-trail",         "path": "skills/worm-audit-trail/SKILL.md" },
+    { "name": "champion-challenger",      "path": "skills/champion-challenger/SKILL.md" },
+    { "name": "data-lineage-ui",          "path": "skills/data-lineage-ui/SKILL.md" },
+    { "name": "stakeholder-driven-ui",    "path": "skills/stakeholder-driven-ui/SKILL.md" },
+    { "name": "narrative-summarization",  "path": "skills/narrative-summarization/SKILL.md" },
+    { "name": "cost-observability",       "path": "skills/cost-observability/SKILL.md" }
+  ],
+  "agents": [
+    { "name": "engagement-discoverer",    "file": "agents/engagement-discoverer.md", "description": "Interactive discovery — walks the user through the variability questionnaire and produces an engagement profile" },
+    { "name": "mock-auditor",             "file": "agents/mock-auditor.md",          "description": "Deep audit of a codebase to find every hidden mock, stub, fake, or hardcoded fallback inside the orchestration boundary" }
+  ],
+  "templates": [
+    "templates/stakeholder-brief.html",
+    "templates/architecture-diagram.txt",
+    "templates/capability-matrix.md",
+    "templates/demo-flow.md",
+    "templates/variability-profile.md"
+  ],
+  "docs": [
+    "docs/methodology.md",
+    "docs/variability-dimensions.md",
+    "docs/stakeholder-archetypes.md",
+    "docs/case-study-collections.md"
+  ]
+}

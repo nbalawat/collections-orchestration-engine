@@ -1,0 +1,136 @@
+{
+  "_doc": "Per-skill trigger and non-trigger scenarios. The runner sends each prompt to Claude with the plugin loaded and verifies whether the named skill is referenced/invoked in the response. Trigger prompts SHOULD fire the skill; non-trigger prompts should NOT.",
+
+  "skills": {
+    "mock-audit": {
+      "should_trigger": [
+        "I need to audit this codebase before adding new features. Find every mock and stub inside the orchestration boundary.",
+        "Is this code real or is it a demo? I want to know what's faked.",
+        "We're claiming this is production-ready but I'm suspicious. Can you check?",
+        "Help me find hidden mocks before this goes to a stakeholder review."
+      ],
+      "should_not_trigger": [
+        "Refactor this function to be more readable.",
+        "Add error handling to the API endpoints.",
+        "Generate unit tests for the customer service module."
+      ]
+    },
+
+    "structured-ai-decisions": {
+      "should_trigger": [
+        "I'm building a Claude agent for customer support. How do I make its decisions auditable?",
+        "We're getting AI responses with hardcoded confidence=0.85. That's a smell, right?",
+        "How do we know what the AI agent actually decided, not just what it said?",
+        "Set up the tool runner so every agent invocation must record its decision."
+      ],
+      "should_not_trigger": [
+        "What's the difference between asyncio and threading in Python?",
+        "Update the React component to use TanStack Query."
+      ]
+    },
+
+    "medallion-lakehouse": {
+      "should_trigger": [
+        "We need to set up a data lake. Bronze/silver/gold pattern on S3.",
+        "How do I write Kafka events to Parquet files for analytics queries?",
+        "Where does the data team plug in? We have Postgres for ops but they want analytics access.",
+        "Set up a DuckDB layer over our Parquet files on S3."
+      ],
+      "should_not_trigger": [
+        "How do I configure Kafka producers?",
+        "Optimize this Postgres query."
+      ]
+    },
+
+    "compliance-as-policy": {
+      "should_trigger": [
+        "We need to enforce Reg F §1006.6 quiet hours. Where does the rule live?",
+        "Compliance should not be buried in if/else statements. How do we externalize it?",
+        "Our CCO wants to see policy rules with regulation citations. Help us structure this.",
+        "How do we enforce HIPAA PHI access rules at the action gate?"
+      ],
+      "should_not_trigger": [
+        "Generate a TypeScript type from this JSON schema.",
+        "Improve the front-end loading state."
+      ]
+    },
+
+    "worm-audit-trail": {
+      "should_trigger": [
+        "We need SOC 2 evidence — the audit trail can't be tampered with. What's the pattern?",
+        "Set up Postgres triggers so audit rows can't be UPDATE'd or DELETE'd.",
+        "How do we prove tamper-evidence at the database layer, not the application?",
+        "SOX requires write-once-read-many for these tables. How?"
+      ],
+      "should_not_trigger": [
+        "Add an index to the user_sessions table.",
+        "Why is my migration failing?"
+      ]
+    },
+
+    "champion-challenger": {
+      "should_trigger": [
+        "We want to A/B test two strategy versions safely. What's the framework?",
+        "How do we measure if the challenger is actually beating the champion?",
+        "Set up customer-level random assignment to strategies with statistical significance testing.",
+        "Compute the lift, p-value, and required sample size between champion v1.0 and challenger v1.1."
+      ],
+      "should_not_trigger": [
+        "What's the best way to mock an LLM call in tests?",
+        "How do I structure my React hooks?"
+      ]
+    },
+
+    "data-lineage-ui": {
+      "should_trigger": [
+        "Build a feature that traces one event across Kafka, Postgres, and S3 tiers.",
+        "Our CTO wants to see that lineage isn't just a slide. What should we build?",
+        "I want to paste an event_id and see it materialized at every storage tier.",
+        "End-to-end data lineage as a UI feature — design the endpoint and the page."
+      ],
+      "should_not_trigger": [
+        "Add a dropdown to the customer filter.",
+        "Refactor the WebSocket connection handler."
+      ]
+    },
+
+    "stakeholder-driven-ui": {
+      "should_trigger": [
+        "We're building dashboards for the CRO, CCO, and CTO. Should it be one page or many?",
+        "How do we design UIs that each stakeholder finds useful without bloating one page?",
+        "What's the right surface for the Head of Operations vs the Compliance Officer?",
+        "Help me think through the page architecture for a multi-persona platform."
+      ],
+      "should_not_trigger": [
+        "Convert this Tailwind class to CSS Modules.",
+        "Why is my Vite build slow?"
+      ]
+    },
+
+    "narrative-summarization": {
+      "should_trigger": [
+        "I want the AI to summarize a customer's full journey, not just dump events.",
+        "Build an Activity Digest feature using Claude that produces a markdown brief per case.",
+        "Senior operators don't want to scroll through logs — give them a 60-second AI summary.",
+        "How do I structure the prompt for AI to produce a dimensional case summary?"
+      ],
+      "should_not_trigger": [
+        "Set up streaming responses from the API.",
+        "Add internationalization to the React app."
+      ]
+    },
+
+    "cost-observability": {
+      "should_trigger": [
+        "What does Claude cost us per day? Build me a dashboard.",
+        "We need FinOps for AI — per-agent per-day token spend.",
+        "Set up a rate card and compute cost per LLM invocation.",
+        "Our CFO is going to ask 'what does this AI cost to run'. What do we show them?"
+      ],
+      "should_not_trigger": [
+        "How do I deploy this to ECS?",
+        "Configure Sentry for error tracking."
+      ]
+    }
+  }
+}
