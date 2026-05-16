@@ -484,13 +484,33 @@ async def record_ptp(
     promised_date: str,
     channel: str = "digital",
 ) -> str:
-    """Record a promise-to-pay from the customer. Triggers PTP monitoring in the workflow."""
+    """Record a promise-to-pay from the customer. Triggers PTP monitoring in the workflow.
+
+    promised_date accepts ISO 8601 date (YYYY-MM-DD) or datetime — we normalize.
+    """
+    # Accept any reasonable date format from the LLM and normalize to date.
+    from datetime import date as _date
+    try:
+        dt = datetime.fromisoformat(promised_date.replace("Z", "+00:00"))
+        promised_date_obj: _date = dt.date()
+    except Exception:
+        try:
+            promised_date_obj = _date.fromisoformat(promised_date[:10])
+        except Exception:
+            return json.dumps({
+                "status": "error",
+                "error": f"Could not parse promised_date '{promised_date}'. Use YYYY-MM-DD.",
+            })
+
+    # Generate ptp_id since the table requires it
+    ptp_id = f"PTP-{customer_id[-4:]}-{int(datetime.now(timezone.utc).timestamp())}"
     await execute_insert("""
-        INSERT INTO promises_to_pay (customer_id, account_id, promised_amount, promised_date, channel, status)
-        VALUES (:cid, :aid, :amount, :date, :channel, 'ACTIVE')
+        INSERT INTO promises_to_pay (ptp_id, customer_id, account_id, promised_amount,
+                                     promised_date, channel, status, captured_by)
+        VALUES (:pid, :cid, :aid, :amount, :date, :channel, 'ACTIVE', 'ai_agent')
     """, {
-        "cid": customer_id, "aid": account_id,
-        "amount": amount, "date": promised_date, "channel": channel,
+        "pid": ptp_id, "cid": customer_id, "aid": account_id,
+        "amount": amount, "date": promised_date_obj, "channel": channel,
     })
 
     try:
@@ -670,14 +690,18 @@ async def create_case_note(
 ) -> str:
     """Create a case note on the customer's account. Used to document interactions,
     decisions, and follow-up actions."""
+    event_id = str(_uuid.uuid4())
     await execute_insert("""
-        INSERT INTO customer_events (customer_id, event_type, channel, direction, intent, payload, occurred_at, source_service)
-        VALUES (:cid, 'case_note', 'system', 'system', NULL, :payload, NOW(), 'ai-agent')
+        INSERT INTO customer_events (event_id, customer_id, event_type, event_category,
+                                     channel, direction, payload, occurred_at, source_service)
+        VALUES (CAST(:eid AS uuid), :cid, 'case_note', 'note',
+                'system', 'system', CAST(:payload AS jsonb), NOW(), 'ai-agent')
     """, {
+        "eid": event_id,
         "cid": customer_id,
         "payload": json.dumps({"note": note, "category": category}),
     })
-    return json.dumps({"status": "note_created", "customer_id": customer_id, "category": category})
+    return json.dumps({"status": "note_created", "event_id": event_id, "customer_id": customer_id, "category": category})
 
 
 @beta_async_tool

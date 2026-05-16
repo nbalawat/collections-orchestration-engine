@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { Markdown } from '@/components/Markdown'
 import type {
   EnrichedEvent, StoryNarrative, StrategyDecisionAudit,
   AgentAction, Escalation, Customer360,
@@ -58,12 +59,10 @@ function NarrativeCard({ id }: { id: string }) {
         </div>
       )}
       {isError && <p className="text-sm text-red-600">Failed to load narrative.</p>}
-      {data?.narrative && (
-        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{data.narrative}</p>
-      )}
+      {data?.narrative && <Markdown variant="narrative">{data.narrative}</Markdown>}
       {!data?.narrative && data?.fallback && (
         <>
-          <p className="text-sm text-slate-700 leading-relaxed">{data.fallback}</p>
+          <Markdown variant="narrative">{data.fallback}</Markdown>
           {data.note && <p className="text-[11px] text-slate-500 mt-2 italic">{data.note}</p>}
           {data.error && <p className="text-[11px] text-red-600 mt-2">Error: {data.error}</p>}
         </>
@@ -146,7 +145,11 @@ function EventCard({ event }: { event: EnrichedEvent }) {
                       (a.confidence ?? 0) > 0.5 ? 'badge-yellow' : 'badge-red'
                     }`}>{((a.confidence ?? 0) * 100).toFixed(0)}%</span>
                   </div>
-                  {a.rationale && <p className="text-[11px] text-slate-600 mt-1">{a.rationale}</p>}
+                  {a.rationale && (
+                    <div className="mt-1">
+                      <Markdown variant="rationale">{a.rationale}</Markdown>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

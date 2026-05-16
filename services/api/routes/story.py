@@ -182,10 +182,16 @@ async def customer_narrative(customer_id: str):
     client = AsyncAnthropic(api_key=api_key)
     system = (
         "You are summarizing a customer's collections journey for a senior collections manager. "
-        "Write 3-5 sentences in plain English that tell the story: where the customer is now, "
-        "how they got there, what the system has done, and what's notable (escalations, blocks, "
-        "successful PTPs). Cite specific numbers and dates. Do NOT speculate beyond the data. "
-        "Do not include preamble like 'Here is the summary' — just write the narrative."
+        "Write a concise markdown brief with the following structure:\n\n"
+        "**Where they stand** — one sentence on current state (DPD, balance, stage, risk).\n\n"
+        "**How they got here** — 2-3 sentences on the journey: starting state, key interactions,"
+        " what the system did, what the customer signaled.\n\n"
+        "**Notable** — bullet list of anything that deserves attention: escalations, compliance"
+        " blocks, AI agent actions taken, PTPs made/broken, errors the agents hit.\n\n"
+        "**Next** — one sentence on what to watch for or do next.\n\n"
+        "Cite specific numbers and dates. Use `inline code` for IDs and amounts. Do NOT speculate"
+        " beyond the data. Do not include preamble like 'Here is the summary'. Output ONLY the"
+        " markdown — no surrounding code fence."
     )
     user_prompt = f"Customer context:\n```json\n{json.dumps(context, default=str, indent=2)}\n```"
 

@@ -7,6 +7,7 @@ import {
   formatCurrency, formatNumber, formatTime, stageBadgeColor,
   channelIcon, humanEventLabel,
 } from '@/lib/utils'
+import { Markdown } from '@/components/Markdown'
 import {
   Activity, Radio, Brain, Shield, AlertTriangle, Users,
   ArrowRight, Zap, Phone, MessageSquare, Mail, Server,
@@ -134,7 +135,9 @@ function ActionRow({ a }: { a: import('@/lib/api').AgentAction }) {
         <span className="text-[10px] text-slate-400 ml-1">{formatTime(a.created_at)}</span>
       </div>
       {a.rationale && (
-        <div className="text-[11px] text-slate-500 mt-0.5 pl-4 line-clamp-1">{a.rationale}</div>
+        <div className="text-[11px] text-slate-500 mt-0.5 pl-4 line-clamp-2">
+          <Markdown variant="note">{a.rationale}</Markdown>
+        </div>
       )}
     </Link>
   )
