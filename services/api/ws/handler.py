@@ -35,7 +35,7 @@ async def ws_all_events(ws: WebSocket):
         while True:
             msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if msg and msg["type"] == "message":
-                await ws.send_bytes(msg["data"])
+                await ws.send_text(msg["data"].decode() if isinstance(msg["data"], bytes) else msg["data"])
             else:
                 await asyncio.sleep(0.1)
     except WebSocketDisconnect:
@@ -61,7 +61,7 @@ async def ws_customer_events(ws: WebSocket, customer_id: str):
         while True:
             msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if msg and msg["type"] == "message":
-                await ws.send_bytes(msg["data"])
+                await ws.send_text(msg["data"].decode() if isinstance(msg["data"], bytes) else msg["data"])
             else:
                 await asyncio.sleep(0.1)
     except WebSocketDisconnect:

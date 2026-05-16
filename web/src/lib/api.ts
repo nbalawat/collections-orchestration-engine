@@ -59,6 +59,21 @@ export const api = {
   listScenarios: () => fetchJSON<{ scenarios: Scenario[] }>('/scenarios'),
   runScenario: (id: string, body?: Record<string, unknown>) =>
     fetchJSON<{ scenario: string; status: string; result: unknown }>(`/scenarios/${id}/run`, { method: 'POST', body: JSON.stringify(body ?? {}) }),
+
+  // Customer detail
+  getCustomerPayments: (id: string) =>
+    fetchJSON<{ payments: Payment[]; customer_id: string }>(`/customers/${id}/payments`),
+  getCustomerContacts: (id: string) =>
+    fetchJSON<{ contacts: Contact[]; customer_id: string }>(`/customers/${id}/contacts`),
+
+  // Portfolio detail
+  portfolioSegments: () => fetchJSON<{ segments: Segment[] }>('/portfolio/segments'),
+  ptpSummary: () => fetchJSON<{ ptps: PtpSummaryEntry[] }>('/portfolio/ptp-summary'),
+  complianceFlags: () => fetchJSON<{ flags: ComplianceFlagSummary[] }>('/portfolio/compliance-flags'),
+
+  // Workflow detail
+  getWorkflowActions: (id: string) => fetchJSON<{ actions: WorkflowAction[] }>(`/workflows/${id}/actions`),
+  getWorkflowEvents: (id: string) => fetchJSON<{ events: Event[] }>(`/workflows/${id}/events`),
 };
 
 // Types
@@ -208,4 +223,59 @@ export interface Scenario {
   name: string;
   description: string;
   default_customer: string;
+}
+
+export interface Payment {
+  payment_id: string;
+  account_id: string;
+  customer_id: string;
+  amount: number;
+  payment_date: string;
+  due_date: string;
+  payment_method: string;
+  status: string;
+}
+
+export interface Contact {
+  contact_id: string;
+  customer_id: string;
+  account_id: string;
+  channel: string;
+  direction: string;
+  contact_type: string;
+  outcome: string;
+  agent_id: string;
+  duration_seconds: number;
+  notes: string;
+  occurred_at: string;
+}
+
+export interface Segment {
+  delinquency_stage: string;
+  risk_bucket: string;
+  count: number;
+  avg_balance: number;
+  avg_dpd: number;
+}
+
+export interface PtpSummaryEntry {
+  status: string;
+  count: number;
+  total_amount: number;
+  avg_amount: number;
+}
+
+export interface ComplianceFlagSummary {
+  flag_type: string;
+  status: string;
+  count: number;
+}
+
+export interface WorkflowAction {
+  action_type: string;
+  channel: string;
+  parameters: Record<string, unknown>;
+  priority: number;
+  reason: string;
+  timestamp?: string;
 }

@@ -91,7 +91,7 @@ class EventProjector:
                 )
                 await self.redis.publish(
                     "events:all",
-                    orjson.dumps({"topic": topic, "customer_id": customer_id, "event_type": value.get("event_type", ""), "category": category_map.get(topic, "unknown")}),
+                    orjson.dumps({"topic": topic, **value}),
                 )
 
             self.event_count += 1
