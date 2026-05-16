@@ -102,6 +102,7 @@ async def compute_contact_stats(customer_id: str) -> ContactStats:
             email_attempts_7d=channel_attempts.get("email", 0),
             dialer_attempts_7d=channel_attempts.get("dialer", 0),
             channel_attempts_7d=channel_attempts,
+            total_attempts_7d=sum(channel_attempts.values()),
             failed_channels=failed_channels,
             conflicting_signals=conflicting,
             last_contact_at=last_contact.isoformat() if last_contact else None,

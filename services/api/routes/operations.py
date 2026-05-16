@@ -153,6 +153,129 @@ async def recent_compliance_blocks(limit: int = Query(30, ge=1, le=200)):
     return {"blocks": rows}
 
 
+@router.get("/portfolio-kpis")
+async def portfolio_kpis():
+    """Real risk-management KPIs: cure rate, roll rate, strategy effectiveness.
+    Reads only from real Postgres data — no synthesized numbers."""
+    # Cure rate: % of customers with payments large enough to cure in last 30 days
+    cure = await execute_query("""
+        WITH past_due_30d AS (
+            SELECT DISTINCT a.customer_id
+            FROM accounts a
+            WHERE a.days_past_due > 0 AND a.status = 'ACTIVE'
+        ),
+        cured_30d AS (
+            SELECT DISTINCT customer_id
+            FROM customer_events
+            WHERE event_type LIKE 'stage_change:%->CURED'
+              AND occurred_at > NOW() - INTERVAL '30 days'
+        )
+        SELECT
+            (SELECT COUNT(*) FROM past_due_30d) AS at_risk,
+            (SELECT COUNT(*) FROM cured_30d) AS cured,
+            CASE WHEN (SELECT COUNT(*) FROM past_due_30d) > 0
+                 THEN ROUND((SELECT COUNT(*)::numeric FROM cured_30d) /
+                            (SELECT COUNT(*)::numeric FROM past_due_30d) * 100, 2)
+                 ELSE NULL END AS cure_rate_pct
+    """)
+
+    # Roll-rate matrix: stage transitions in last 30 days
+    rolls = await execute_query("""
+        SELECT
+            SUBSTRING(event_type FROM 'stage_change:([A-Z_]+)->') AS from_stage,
+            SUBSTRING(event_type FROM '->([A-Z_]+)$') AS to_stage,
+            COUNT(*) AS transitions
+        FROM customer_events
+        WHERE event_type LIKE 'stage_change:%->%'
+          AND occurred_at > NOW() - INTERVAL '30 days'
+        GROUP BY from_stage, to_stage
+        ORDER BY transitions DESC
+        LIMIT 30
+    """)
+
+    # Strategy-version comparison: actions taken + escalation rate per version
+    strategy_perf = await execute_query("""
+        WITH per_customer AS (
+            SELECT csa.customer_id, csa.strategy_version
+            FROM customer_strategy_assignments csa
+        ),
+        per_version AS (
+            SELECT pc.strategy_version,
+                   COUNT(DISTINCT pc.customer_id) AS customers,
+                   COUNT(aa.action_id) FILTER (WHERE aa.created_at > NOW() - INTERVAL '7 days') AS actions_7d,
+                   COUNT(aa.action_id) FILTER (WHERE aa.status = 'escalated'
+                                                AND aa.created_at > NOW() - INTERVAL '7 days') AS escalations_7d,
+                   AVG(aa.confidence)::numeric(4,3) AS avg_confidence
+            FROM per_customer pc
+            LEFT JOIN agent_actions aa ON aa.customer_id = pc.customer_id
+            GROUP BY pc.strategy_version
+        ),
+        cures_per_version AS (
+            SELECT pc.strategy_version,
+                   COUNT(DISTINCT ce.customer_id) AS cured_7d
+            FROM per_customer pc
+            JOIN customer_events ce ON ce.customer_id = pc.customer_id
+            WHERE ce.event_type LIKE 'stage_change:%->CURED'
+              AND ce.occurred_at > NOW() - INTERVAL '7 days'
+            GROUP BY pc.strategy_version
+        )
+        SELECT pv.strategy_version, sv.role, sv.description,
+               pv.customers, pv.actions_7d, pv.escalations_7d, pv.avg_confidence,
+               COALESCE(cv.cured_7d, 0) AS cured_7d,
+               CASE WHEN pv.customers > 0
+                    THEN ROUND(COALESCE(cv.cured_7d, 0)::numeric / pv.customers::numeric * 100, 2)
+                    ELSE NULL END AS cure_rate_7d_pct
+        FROM per_version pv
+        LEFT JOIN strategy_versions sv ON sv.strategy_version = pv.strategy_version
+        LEFT JOIN cures_per_version cv ON cv.strategy_version = pv.strategy_version
+        ORDER BY sv.role
+    """)
+
+    # Recovery: payments received in last 30 days vs total past due 30 days ago
+    recovery = await execute_query("""
+        SELECT
+            COALESCE(SUM(ph.amount), 0)::numeric AS payments_30d,
+            COUNT(DISTINCT ph.customer_id) AS paying_customers
+        FROM payment_history ph
+        WHERE ph.payment_date > NOW() - INTERVAL '30 days'
+          AND UPPER(ph.status) = 'COMPLETED'
+    """)
+
+    # PTP performance: kept vs broken vs pending
+    ptp = await execute_query("""
+        SELECT status, COUNT(*) AS n
+        FROM promises_to_pay
+        WHERE created_at > NOW() - INTERVAL '30 days'
+        GROUP BY status
+    """)
+
+    # Compliance enforcement rate
+    enforcement = await execute_query("""
+        WITH agg AS (
+            SELECT
+                COUNT(*) FILTER (WHERE (payload->>'passed')::boolean = true) AS allowed,
+                COUNT(*) FILTER (WHERE (payload->>'passed')::boolean = false) AS blocked
+            FROM customer_events
+            WHERE event_category = 'compliance'
+              AND occurred_at > NOW() - INTERVAL '24 hours'
+        )
+        SELECT allowed, blocked,
+               CASE WHEN (allowed + blocked) > 0
+                    THEN ROUND(blocked::numeric / (allowed + blocked)::numeric * 100, 2)
+                    ELSE NULL END AS block_rate_pct
+        FROM agg
+    """)
+
+    return {
+        "cure": cure[0] if cure else {},
+        "roll_matrix": rolls,
+        "strategy_performance": strategy_perf,
+        "recovery_30d": recovery[0] if recovery else {},
+        "ptp_30d": ptp,
+        "enforcement_24h": enforcement[0] if enforcement else {},
+    }
+
+
 @router.get("/portfolio-pulse")
 async def portfolio_pulse():
     """One-call summary for the Operations Floor header."""

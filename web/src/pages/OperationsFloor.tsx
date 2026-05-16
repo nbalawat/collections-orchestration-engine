@@ -234,6 +234,12 @@ export default function OperationsFloor() {
     refetchInterval: 4000,
   })
 
+  const { data: kpis } = useQuery({
+    queryKey: ['ops-portfolio-kpis'],
+    queryFn: api.opsPortfolioKpis,
+    refetchInterval: 10000,
+  })
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-6 py-3 border-b border-slate-200 bg-white flex items-center justify-between">
@@ -294,6 +300,99 @@ export default function OperationsFloor() {
             icon={<TrendingUp size={12} />}
           />
         </div>
+
+        <section>
+          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+            <TrendingUp size={16} /> Portfolio risk KPIs &amp; strategy A/B
+          </h2>
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            <div className="bg-white border border-slate-200 rounded-lg p-3">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500">Cure rate (30d)</div>
+              <div className="text-2xl font-bold text-slate-800 mt-1">
+                {kpis?.cure?.cure_rate_pct != null ? `${kpis.cure.cure_rate_pct}%` : '—'}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {kpis?.cure?.cured ?? 0} cured of {kpis?.cure?.at_risk ?? 0} past-due
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-lg p-3">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500">Recovery (30d)</div>
+              <div className="text-2xl font-bold text-slate-800 mt-1">
+                {kpis?.recovery_30d?.payments_30d
+                  ? formatCurrency(Number(kpis.recovery_30d.payments_30d))
+                  : '—'}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {kpis?.recovery_30d?.paying_customers ?? 0} paying customers
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-lg p-3">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500">Compliance enforcement (24h)</div>
+              <div className="text-2xl font-bold text-slate-800 mt-1">
+                {kpis?.enforcement_24h?.block_rate_pct != null
+                  ? `${kpis.enforcement_24h.block_rate_pct}%`
+                  : '—'}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {kpis?.enforcement_24h?.blocked ?? 0} blocked / {(kpis?.enforcement_24h?.allowed ?? 0) + (kpis?.enforcement_24h?.blocked ?? 0)} evaluated
+              </div>
+            </div>
+            <div className="bg-white border border-slate-200 rounded-lg p-3">
+              <div className="text-[10px] uppercase tracking-wider text-slate-500">PTP outcomes (30d)</div>
+              <div className="text-2xl font-bold text-slate-800 mt-1">
+                {kpis?.ptp_30d?.reduce((s, p) => s + (p.n ?? 0), 0) ?? 0}
+              </div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {(kpis?.ptp_30d ?? []).map((p) => `${p.n} ${p.status}`).join(' · ')}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-lg p-3">
+            <div className="text-[11px] uppercase tracking-wider text-slate-500 mb-2">Strategy A/B comparison · live cure rate &amp; agent confidence by version</div>
+            {(kpis?.strategy_performance ?? []).length === 0 ? (
+              <p className="text-sm text-slate-400">Awaiting strategy data…</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="text-[10px] uppercase tracking-wider text-slate-500">
+                  <tr>
+                    <th className="text-left py-1.5">Version</th>
+                    <th className="text-left py-1.5">Role</th>
+                    <th className="text-right py-1.5">Customers</th>
+                    <th className="text-right py-1.5">Actions 7d</th>
+                    <th className="text-right py-1.5">Escalations</th>
+                    <th className="text-right py-1.5">Cure rate 7d</th>
+                    <th className="text-right py-1.5">Avg confidence</th>
+                    <th className="text-left pl-3 py-1.5">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(kpis?.strategy_performance ?? []).map((s) => (
+                    <tr key={s.strategy_version} className="border-t border-slate-100">
+                      <td className="py-1.5"><code className="text-xs">{s.strategy_version}</code></td>
+                      <td className="py-1.5">
+                        <span className={`badge text-[10px] ${
+                          s.role === 'champion' ? 'badge-green' :
+                          s.role === 'challenger' ? 'badge-blue' : 'badge-gray'
+                        }`}>{s.role}</span>
+                      </td>
+                      <td className="text-right py-1.5 text-slate-700">{s.customers}</td>
+                      <td className="text-right py-1.5 text-slate-700">{s.actions_7d}</td>
+                      <td className={`text-right py-1.5 ${s.escalations_7d > 0 ? 'text-amber-600' : 'text-slate-700'}`}>{s.escalations_7d}</td>
+                      <td className="text-right py-1.5 text-slate-700">
+                        {s.cure_rate_7d_pct != null ? `${s.cure_rate_7d_pct}%` : '—'}
+                      </td>
+                      <td className="text-right py-1.5 text-slate-700">
+                        {s.avg_confidence != null ? `${(s.avg_confidence * 100).toFixed(0)}%` : '—'}
+                      </td>
+                      <td className="pl-3 py-1.5 text-xs text-slate-500 max-w-md truncate">{s.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
 
         <section>
           <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">

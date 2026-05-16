@@ -122,6 +122,7 @@ class ContactStats:
     email_attempts_7d: int = 0
     dialer_attempts_7d: int = 0
     channel_attempts_7d: dict = field(default_factory=dict)
+    total_attempts_7d: int = 0  # Reg F §1006.14(a) — total across all channels
     failed_channels: list[str] = field(default_factory=list)
     conflicting_signals: list[str] = field(default_factory=list)
     last_contact_at: str | None = None

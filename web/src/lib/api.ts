@@ -92,6 +92,7 @@ export const api = {
   opsAgentSummary: () => fetchJSON<{ agents: AgentSummary[] }>('/operations/agent-activity/summary'),
   opsEscalationQueue: () => fetchJSON<{ escalations: Escalation[] }>('/operations/escalation-queue'),
   opsComplianceBlocks: (limit = 20) => fetchJSON<{ blocks: ComplianceBlock[] }>(`/operations/compliance-blocks?limit=${limit}`),
+  opsPortfolioKpis: () => fetchJSON<PortfolioKpis>('/operations/portfolio-kpis'),
 
   // Customer Story
   storyNarrative: (id: string) => fetchJSON<StoryNarrative>(`/story/customers/${id}/narrative`),
@@ -442,6 +443,25 @@ export interface Escalation {
   first_name: string | null;
   last_name: string | null;
   seconds_until_sla: number;
+}
+
+export interface PortfolioKpis {
+  cure: { at_risk: number; cured: number; cure_rate_pct: number | null };
+  roll_matrix: { from_stage: string; to_stage: string; transitions: number }[];
+  strategy_performance: {
+    strategy_version: string;
+    role: string;
+    description: string;
+    customers: number;
+    actions_7d: number;
+    escalations_7d: number;
+    avg_confidence: number | null;
+    cured_7d: number;
+    cure_rate_7d_pct: number | null;
+  }[];
+  recovery_30d: { payments_30d: number; paying_customers: number };
+  ptp_30d: { status: string; n: number }[];
+  enforcement_24h: { allowed: number; blocked: number; block_rate_pct: number | null };
 }
 
 export interface ComplianceBlock {

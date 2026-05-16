@@ -7,7 +7,7 @@ payments, compliance signals, and strategy updates.
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from temporalio import workflow
 from temporalio.common import RetryPolicy
@@ -26,7 +26,7 @@ with workflow.unsafe.imports_passed_through():
         StrategyDecision,
         StrategyUpdateSignal,
     )
-    from workflows.activities import account, strategy, compliance, dispatch, history, ai_invoke
+    from workflows.activities import account, strategy, compliance, dispatch, history, ai_invoke, validation
 
 
 ACTIVITY_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=1))
@@ -42,6 +42,8 @@ class CustomerJourney:
         self.pending_tick = False
         self._latest_stats: ContactStats | None = None
         self._current_trace_id: str | None = None
+        self._validation_notice_id: str | None = None
+        self._validation_notice_sent: bool = False
 
     # ── Main workflow loop ───────────────────────────────────────────
 
@@ -89,6 +91,8 @@ class CustomerJourney:
 
             self.pending_tick = False
             if not self.state.is_terminal():
+                # PTP lifecycle check before any other action
+                await self._check_ptp_status()
                 decision = await self._evaluate_strategy()
                 await self._apply_decision(decision)
 
@@ -223,6 +227,27 @@ class CustomerJourney:
             except Exception:
                 pass  # AI failure shouldn't block the rest of the workflow
 
+        # Auto-trigger quality/compliance review on completed voice calls.
+        if evt.channel == "voice" and evt.event_type in ("call_connected_rpc", "call_completed"):
+            transcript = ""
+            if isinstance(evt.payload, dict):
+                transcript = str(evt.payload.get("transcript") or evt.payload.get("text") or "")
+            try:
+                await workflow.execute_activity(
+                    ai_invoke.invoke_quality_compliance_review,
+                    args=[
+                        self.state.customer_id,
+                        workflow.info().workflow_id,
+                        evt.event_id or str(workflow.now()),
+                        evt.channel,
+                        transcript,
+                    ],
+                    start_to_close_timeout=timedelta(seconds=120),
+                    retry_policy=ACTIVITY_RETRY,
+                )
+            except Exception:
+                pass  # QC failure shouldn't block; we'll see it in metrics
+
         if evt.intent == "PTP":
             amount = evt.payload.get("amount", self.state.balance * 0.5)
             promised_date = evt.payload.get("promised_date", "")
@@ -251,6 +276,36 @@ class CustomerJourney:
                 "customer inquired about settlement",
                 evt.channel,
             )
+
+    async def _check_ptp_status(self) -> None:
+        """PTP lifecycle check, called each main-loop tick.
+
+        - If active PTP is past promised_date+1 with no payment received,
+          mark it BROKEN and transition the workflow.
+        - If active PTP is 1 day from due and no payment yet, schedule a
+          courtesy reminder on the next decision pass.
+        """
+        ptp = self.state.active_ptp
+        if not ptp or self.state.stage != JourneyStage.PTP_ACTIVE:
+            return
+        promised = ptp.get("promised_date") or ""
+        if not promised:
+            return
+        try:
+            promised_dt = datetime.fromisoformat(promised)
+        except ValueError:
+            return
+        now = workflow.now()
+        if now.date() > promised_dt.date() + timedelta(days=1):
+            ptp["status"] = "BROKEN"
+            self.state.active_ptp = None
+            await self._transition(
+                JourneyStage.PTP_BROKEN,
+                f"PTP broken: promised ${ptp.get('amount')} by {promised}, no payment",
+                "ptp_monitor",
+            )
+        elif now.date() == promised_dt.date() - timedelta(days=1):
+            ptp["reminder_pending"] = True
 
     async def _handle_payment(self, pmt: PaymentSignal) -> None:
         self.state.balance = max(0, self.state.balance - pmt.amount)
@@ -337,30 +392,72 @@ class CustomerJourney:
             reason=f"strategy evaluation #{self.state.evaluation_count}",
         )
 
-        local_hour = self._latest_stats.customer_local_hour if self._latest_stats else 14
-        voice_7d = self._latest_stats.voice_attempts_7d if self._latest_stats else 0
+        s = self._latest_stats
+        local_hour = s.customer_local_hour if s else 14
+        voice_7d = s.voice_attempts_7d if s else 0
+        channel_7d = s.channel_attempts_7d if s else {}
+        total_7d = s.total_attempts_7d if s else 0
         comp_result = await workflow.execute_activity(
             compliance.check_compliance,
-            args=[action, self.state.compliance_flags, local_hour, voice_7d],
+            args=[action, self.state.compliance_flags, local_hour, voice_7d, channel_7d, total_7d],
+            start_to_close_timeout=timedelta(seconds=5),
+        )
+
+        # Emit every compliance evaluation — pass AND fail — so we have full audit
+        # of action gating. Auditors require an affirmative record per attempt.
+        await workflow.execute_activity(
+            dispatch.publish_compliance_event,
+            args=[
+                self.state.customer_id,
+                workflow.info().workflow_id,
+                "action_gate",
+                bool(comp_result.get("allowed", False)),
+                comp_result.get("reason", ""),
+                comp_result,
+                None if comp_result.get("allowed") else action.action_type,
+                self._current_trace_id,
+            ],
             start_to_close_timeout=timedelta(seconds=5),
         )
 
         if not comp_result.get("allowed", False):
-            await workflow.execute_activity(
-                dispatch.publish_compliance_event,
-                args=[
-                    self.state.customer_id,
-                    workflow.info().workflow_id,
-                    "action_gate",
-                    False,
-                    comp_result.get("reason", ""),
-                    comp_result,
-                    action.action_type,
-                    self._current_trace_id,
-                ],
-                start_to_close_timeout=timedelta(seconds=5),
-            )
             return
+
+        # Reg F §1006.34: ensure validation notice is scheduled on first outbound
+        # action and dispatch it if we're approaching the 5-day deadline.
+        if not self._validation_notice_sent:
+            try:
+                notice = await workflow.execute_activity(
+                    validation.ensure_validation_notice_scheduled,
+                    args=[
+                        self.state.customer_id,
+                        workflow.info().workflow_id,
+                        self.state.account_id,
+                        str(workflow.now()),
+                        action.channel,
+                    ],
+                    start_to_close_timeout=timedelta(seconds=10),
+                )
+                self._validation_notice_id = notice["notice_id"]
+                if notice["status"] == "sent":
+                    self._validation_notice_sent = True
+                else:
+                    # Dispatch immediately on first outbound — defensible posture.
+                    await workflow.execute_activity(
+                        validation.dispatch_validation_notice,
+                        args=[
+                            self.state.customer_id,
+                            workflow.info().workflow_id,
+                            notice["notice_id"],
+                            "email",
+                            self._current_trace_id,
+                        ],
+                        start_to_close_timeout=timedelta(seconds=10),
+                        retry_policy=ACTIVITY_RETRY,
+                    )
+                    self._validation_notice_sent = True
+            except Exception:
+                pass  # don't let validation hiccup block the rest of the workflow
 
         result = await workflow.execute_activity(
             dispatch.dispatch_action,

@@ -138,24 +138,48 @@ channel_blocked("sms") if {
 	written_only
 }
 
-# Quiet hours: 9pm-8am customer local time
+# Quiet hours per Reg F §1006.6(b)(1): no communication "at any unusual time or
+# place", presumed unusual before 8am or after 9pm in the consumer's local time.
+# Applies to ALL real-time channels — voice, SMS, dialer. Email is exempt because
+# it's not synchronous/disruptive.
+quiet_channels := {"voice", "sms", "dialer", "digital"}
+
 quiet_hours_blocked(action) if {
-	action.channel != "email"
+	action.channel in quiet_channels
 	input.customer_local_hour >= 21
 }
 
 quiet_hours_blocked(action) if {
-	action.channel != "email"
+	action.channel in quiet_channels
 	input.customer_local_hour < 8
 }
 
-# Frequency: Reg F 7-in-7 for voice
+# Frequency: Reg F §1006.14(b) — call frequency caps.
+#   (1) No more than 7 calls within 7 consecutive days about a particular debt.
+#   (2) No call within 7 days of a telephone conversation in connection with the debt.
+# We model the 7-in-7 cap for voice and dialer (both initiate a phone connection).
 frequency_blocked("voice") if {
 	input.voice_attempts_7d >= 7
 }
 
 frequency_blocked("dialer") if {
 	input.voice_attempts_7d >= 7
+}
+
+# Reg F also expects reasonable limits on non-call channels. We enforce a generous
+# cap to prevent runaway SMS/email bombardment and to support state overlays.
+frequency_blocked("sms") if {
+	input.channel_attempts_7d.sms >= 10
+}
+
+frequency_blocked("email") if {
+	input.channel_attempts_7d.email >= 14
+}
+
+# Total contact attempts across all channels — sanity bound to avoid harassment
+# claims under UDAAP / §1006.14(a) "unconscionable means" prohibition.
+frequency_blocked(_) if {
+	input.total_attempts_7d >= 21
 }
 
 default channel_blocked(_) := false

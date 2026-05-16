@@ -18,11 +18,15 @@ async def check_compliance(
     compliance_flags: list[str],
     customer_local_hour: int,
     voice_attempts_7d: int,
+    channel_attempts_7d: dict | None = None,
+    total_attempts_7d: int = 0,
 ) -> dict:
     opa_input = {
         "compliance_flags": compliance_flags,
         "customer_local_hour": customer_local_hour,
         "voice_attempts_7d": voice_attempts_7d,
+        "channel_attempts_7d": channel_attempts_7d or {},
+        "total_attempts_7d": total_attempts_7d,
     }
     action_input = {
         "channel": action.channel,

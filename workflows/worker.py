@@ -16,7 +16,8 @@ from temporalio.worker import Worker
 from workflows.customer_journey import CustomerJourney
 from workflows.activities.account import lookup_account
 from workflows.activities.history import compute_contact_stats
-from workflows.activities.ai_invoke import invoke_digital_channel_agent
+from workflows.activities.ai_invoke import invoke_digital_channel_agent, invoke_quality_compliance_review
+from workflows.activities.validation import ensure_validation_notice_scheduled, dispatch_validation_notice
 from workflows.activities.strategy import evaluate_strategy
 from workflows.activities.compliance import check_compliance
 from workflows.activities.dispatch import (
@@ -53,6 +54,9 @@ async def main():
             publish_compliance_event,
             publish_ai_reasoning,
             invoke_digital_channel_agent,
+            invoke_quality_compliance_review,
+            ensure_validation_notice_scheduled,
+            dispatch_validation_notice,
         ],
     )
 

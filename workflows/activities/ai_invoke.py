@@ -50,5 +50,35 @@ async def invoke_digital_channel_agent(
     return result
 
 
+@activity.defn
+async def invoke_quality_compliance_review(
+    customer_id: str,
+    workflow_id: str,
+    interaction_id: str,
+    channel: str,
+    transcript: str = "",
+) -> dict:
+    """Auto-fired after a completed voice call. The agent runs the OPA transcript_audit
+    policy via check_compliance_rules, scores quality dimensions, generates coaching
+    notes, and persists a quality_reviews row. Closes the loop on transcript audit."""
+    from services.ai_agents.quality_compliance_agent import QualityComplianceAgent
+
+    agent = QualityComplianceAgent()
+    result = await agent.invoke({
+        "customer_id": customer_id,
+        "workflow_id": workflow_id,
+        "interaction_id": interaction_id,
+        "channel": channel,
+        "transcript": transcript,
+        "review_type": "full",
+    })
+    logger.info(
+        "QC review finished for %s interaction=%s: action=%s confidence=%.2f",
+        customer_id, interaction_id,
+        result.get("action_taken"), result.get("confidence", 0.0),
+    )
+    return result
+
+
 def should_invoke_agent(intent: str | None) -> bool:
     return intent in AUTO_AGENT_INTENTS if intent else False

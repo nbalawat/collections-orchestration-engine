@@ -15,21 +15,56 @@ OPA_URL = "http://localhost:8181"
 DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
 
 
-async def _current_strategy_version() -> str:
-    """Read the live strategy version from strategy_audit_log, falling back to v1.0.0."""
+async def _resolve_strategy_version(customer_id: str) -> str:
+    """Look up the customer's assigned strategy version (champion or challenger).
+    If unassigned, randomly allocate based on strategy_versions.allocation_pct weights
+    and persist the assignment so future evaluations are stable.
+    """
+    import random as _random
+
     try:
         conn = await asyncpg.connect(DB_DSN)
-        try:
-            row = await conn.fetchrow("""
-                SELECT strategy_version FROM strategy_audit_log
-                WHERE strategy_version IS NOT NULL
-                ORDER BY evaluated_at DESC NULLS LAST LIMIT 1
-            """)
-            return (row["strategy_version"] if row else None) or "v1.0.0"
-        finally:
-            await conn.close()
     except Exception:
         return "v1.0.0"
+
+    try:
+        existing = await conn.fetchrow(
+            "SELECT strategy_version FROM customer_strategy_assignments WHERE customer_id = $1",
+            customer_id,
+        )
+        if existing:
+            return existing["strategy_version"]
+
+        versions = await conn.fetch("""
+            SELECT strategy_version, allocation_pct FROM strategy_versions
+            WHERE role IN ('champion', 'challenger') AND retired_at IS NULL
+            ORDER BY allocation_pct DESC
+        """)
+        if not versions:
+            return "v1.0.0"
+
+        total = sum(float(v["allocation_pct"] or 0) for v in versions) or 1.0
+        roll = _random.random() * total
+        cum = 0.0
+        chosen = versions[0]["strategy_version"]
+        for v in versions:
+            cum += float(v["allocation_pct"] or 0)
+            if roll <= cum:
+                chosen = v["strategy_version"]
+                break
+
+        try:
+            await conn.execute("""
+                INSERT INTO customer_strategy_assignments (customer_id, strategy_version)
+                VALUES ($1, $2)
+                ON CONFLICT (customer_id) DO NOTHING
+            """, customer_id, chosen)
+        except Exception:
+            pass
+
+        return chosen
+    finally:
+        await conn.close()
 
 
 @activity.defn
@@ -89,7 +124,8 @@ async def evaluate_strategy(account_info: AccountInfo, stats: ContactStats | Non
 
     dpd = account_info.days_past_due
     next_eval = 24.0 if dpd < 30 else 12.0 if dpd < 60 else 8.0 if dpd < 90 else 6.0
-    strategy_version = await _current_strategy_version()
+    strategy_version = await _resolve_strategy_version(account_info.customer_id)
+    opa_input["strategy_version"] = strategy_version
 
     # Persist the decision rationale — input + outputs — for full audit trail.
     try:
