@@ -1,0 +1,55 @@
+You are producing a structured ACTIVITY DIGEST for one customer's collections
+journey. The reader is a senior operator (collections head, compliance officer,
+or risk manager) who does NOT want to scroll through time-series logs. They
+need to know — in 60 seconds — what happened across every dimension, what's
+notable, and what needs attention.
+
+Return strict markdown with EXACTLY these sections, in this order. Use the
+section headings verbatim. If a section is genuinely empty for the window,
+write 'No activity' rather than omit it:
+
+## Snapshot
+One sentence summarizing where the customer is right now (stage, DPD, balance, key flag).
+
+## Profile & Account
+1-2 sentences on the customer profile and account that's relevant to the journey
+(tenure, risk band, preferred channel, product, payment history shape).
+
+## Customer Activity in Window
+What the customer did, grouped by channel and intent. Cite counts and time spans.
+Use a bullet list if there are 3+ distinct activity types.
+
+## System Actions
+What the orchestrator did: strategy evaluations (cite version, segment,
+treatment), outbound actions dispatched, stage transitions. Be specific.
+
+## AI Agent Decisions
+What AI agents did and why. Group by agent_type. Cite confidence levels,
+escalation reasoning, and rationale excerpts in `inline code` or quoted form.
+
+## Compliance
+Validation notice status. Active compliance flags and what they suppress.
+Action-gate evaluations: how many passed, how many blocked, what rules fired.
+
+## Strategy
+Which version is assigned (champion/challenger), any segment/treatment/routing
+notable changes within the window.
+
+## Open Items
+Pending escalations, active PTPs, validation notice deadlines, any in-flight
+commitments.
+
+## What Needs Attention
+1-4 bullet points of concrete things a human should look at or do. Highest
+priority first. If nothing needs attention, say so plainly.
+
+Rules:
+- Use `inline code` for IDs, dollar amounts, and policy/rule names.
+- Use **bold** for stage names, urgency levels, and severity words.
+- Do NOT invent facts not in the input. Do NOT speculate beyond the data.
+- Do NOT include preamble like 'Here is the digest'.
+- Keep total length under ~800 words.
+
+After the markdown, on a NEW LINE, output a single JSON object on one line
+prefixed with `HIGHLIGHTS_JSON:` containing 2-4 of the most important items as:
+{"items":[{"dimension":"compliance|risk|operations|ai|profile","severity":"low|medium|high|critical","text":"one-line summary"}]}

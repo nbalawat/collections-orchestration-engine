@@ -4,29 +4,32 @@ A Claude Code plugin that turns one successful platform engagement into a repeat
 
 ## What this plugin gives you
 
-**Six slash commands** that drive an engagement end-to-end:
+**Seven slash commands** that drive an engagement end-to-end:
 
 | Command | What it does |
 |---|---|
 | `/engagement-init` | Walks the variability questionnaire (industry, stack, regulator, stakeholders) and produces an engagement profile |
+| `/engagement-scaffold` | Bootstraps the foundation files (docker-compose, src/, DB migrations with WORM triggers, OPA policies, agent skeleton) from the engagement profile |
 | `/engagement-audit` | Systematic audit of a codebase for mocks/stubs/fakes inside the orchestration boundary |
 | `/engagement-stakeholders` | Maps platform capabilities onto the specific stakeholders in the room |
 | `/engagement-demo-flow` | Generates an N-minute demo path tailored to the engagement profile |
 | `/engagement-brief` | Produces a self-contained stakeholder brief HTML (the leave-behind document) |
 | `/engagement-roadmap` | 3-horizon roadmap (4 weeks / 3 months / 9 months) from current state |
 
-**Ten methodology skills** that auto-trigger when the user works on the corresponding pattern. Each skill contains the pattern, what it solves, the trade-offs, and a worked example from the reference engagement:
+**Ten methodology skills** that auto-trigger when the user works on the corresponding pattern. Each skill contains the pattern doc (SKILL.md) AND a `code/` subdirectory with copyable reference implementations lifted from the reference engagement:
 
-- `mock-audit` — finding hidden mocks inside the orchestration boundary
-- `structured-ai-decisions` — making AI agent decisions governable
-- `medallion-lakehouse` — bronze / silver / gold pattern on any object store
-- `compliance-as-policy` — externalizing regulatory rules into a policy engine
-- `worm-audit-trail` — tamper-evident audit at the database layer
-- `champion-challenger` — A/B testing for strategies, not just experiments
-- `data-lineage-ui` — proving the architecture by tracing one record end-to-end
-- `stakeholder-driven-ui` — one surface per persona, each answering their first 10 questions
-- `narrative-summarization` — replacing log scrolling with structured AI summaries
-- `cost-observability` — FinOps for AI before the bill arrives
+| Skill | Pattern doc | Reference code |
+|---|---|---|
+| `mock-audit` | Hidden-mock hunting | `code/find-mocks.sh` — grep-based first pass |
+| `structured-ai-decisions` | Governable AI | `code/base_agent.py`, `code/record_decision.py`, `code/agent_actions.sql` |
+| `medallion-lakehouse` | Bronze→Silver→Gold | `code/lake_sink.py` — Kafka → S3 gzip JSONL |
+| `compliance-as-policy` | Regulatory enforcement | `code/compliance.rego`, `code/transcript_audit.rego`, `code/wrapper.py` |
+| `worm-audit-trail` | DB-layer tamper-evidence | `code/audit_immutable.sql`, `code/apply_triggers.sql`, `code/verify.sh` |
+| `champion-challenger` | Safe A/B rollout | `code/schema.sql`, `code/allocator.py`, `code/ab_significance.py`, `code/api.py` |
+| `data-lineage-ui` | Trace event across tiers | `code/lineage_endpoint.py` — 6-tier walk |
+| `stakeholder-driven-ui` | Persona pages | `code/page-layout-template.tsx`, `code/pulse-tile.tsx` |
+| `narrative-summarization` | AI-generated summaries | `code/system_prompt.txt` — 9-section structure |
+| `cost-observability` | FinOps for AI | `code/ai_cost_endpoint.py` — per-day rate-card |
 
 **Two specialist subagents:**
 

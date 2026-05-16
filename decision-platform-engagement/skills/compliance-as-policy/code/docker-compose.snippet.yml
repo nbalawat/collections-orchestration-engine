@@ -1,0 +1,17 @@
+# OPA service — hot-reloads policies from ./strategies on the filesystem
+opa:
+  image: openpolicyagent/opa:0.70.0
+  ports:
+    - "8181:8181"
+  command:
+    - run
+    - --server
+    - --addr=0.0.0.0:8181
+    - --watch
+    - /policies
+  volumes:
+    - ./strategies:/policies     # mount your Rego files here
+  deploy:
+    resources:
+      limits:
+        memory: 64M
