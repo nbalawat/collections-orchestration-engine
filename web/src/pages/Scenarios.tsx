@@ -6,77 +6,13 @@ import type { Customer360, Event } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import {
   formatCurrency, formatNumber, formatDateTime, formatTime, channelIcon, stageBadgeColor,
+  humanEventLabel,
 } from '@/lib/utils'
 import {
   Play, CheckCircle, Loader, AlertCircle, Radio, X, Brain, Shield,
   ChevronRight, Phone, MessageSquare, Mail, Activity, Zap, Clock,
   ArrowRight, User, RefreshCw, Eye, DollarSign,
 } from 'lucide-react'
-
-function eventLabel(event: LiveEvent): string {
-  const labels: Record<string, string> = {
-    sms_sent: 'SMS Sent',
-    sms_received: 'SMS Received',
-    sms_delivered: 'SMS Delivered',
-    call_connected_rpc: 'Voice Call Connected',
-    call_initiated: 'Call Initiated',
-    call_completed: 'Call Completed',
-    call_outcome_logged: 'Call Outcome Logged',
-    email_sent: 'Email Sent',
-    email_delivered: 'Email Delivered',
-    email_opened: 'Email Opened',
-    email_bounced: 'Email Bounced',
-    payment_received: 'Payment Received',
-    payment_posted: 'Payment Posted',
-    strategy_evaluation: 'Strategy Evaluated',
-    ai_reasoning_trace: 'AI Reasoning',
-    journey_stage_change: 'Journey Stage Change',
-    compliance_check: 'Compliance Check',
-    dialer_campaign_loaded: 'Dialer Campaign',
-    dialer_call_attempted: 'Dialer Attempt',
-    hardship_detected: 'Hardship Detected',
-    escalation_triggered: 'Escalation',
-    ptp_recorded: 'PTP Recorded',
-    arrangement_applied: 'Arrangement Applied',
-  }
-
-  const et = event.event_type || ''
-  if (labels[et]) return labels[et]
-
-  const topic = (event.topic as string) || ''
-  if (topic.includes('decisions') || et === 'decisions') {
-    const dt = (event.decision_type as string) || ''
-    if (dt === 'strategy_evaluation') return 'Strategy Evaluated'
-    return 'Decision: ' + (dt || event.policy_name || 'Evaluation')
-  }
-  if (topic.includes('compliance') || et === 'compliance') {
-    const ct = (event.check_type as string) || ''
-    const passed = event.passed as boolean | undefined
-    const rule = (event.rule_name as string) || ''
-    const blocked = (event.action_blocked as string) || ''
-    if (blocked) return `Blocked: ${blocked.replace(/_/g, ' ')}`
-    if (ct) return `Compliance: ${ct.replace(/_/g, ' ')}${passed === false ? ' ✗' : passed === true ? ' ✓' : ''}`
-    return `Compliance${rule ? ': ' + rule : ''}`
-  }
-  if (topic.includes('lifecycle') || et === 'lifecycle') {
-    const from = (event.from_stage as string) || ''
-    const to = (event.to_stage as string) || ''
-    if (from && to) return `${from} → ${to}`
-    if (to) return `Stage: ${to}`
-    return 'Lifecycle Change'
-  }
-  if (topic.includes('ai.reasoning') || et === 'ai_reasoning') {
-    const agent = (event.agent_type as string) || ''
-    return agent ? `AI: ${agent.replace(/_/g, ' ')}` : 'AI Reasoning'
-  }
-  if (topic.includes('actions') || et === 'actions') {
-    const at = (event.action_type as string) || ''
-    return at ? at.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Action Dispatched'
-  }
-
-  if (et) return et.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).replace(/Rpc$/, '').trim()
-  return 'Event'
-}
 
 function eventCategory(event: LiveEvent): string {
   const topic = (event.topic as string) || ''
@@ -506,7 +442,7 @@ function ScenarioTheater({
                           </span>
                         )}
                         <span className="text-sm text-slate-700 font-medium truncate">
-                          {eventLabel(event)}
+                          {humanEventLabel(event.event_type || '', event.payload)}
                         </span>
                         {intent && (
                           <span className={`badge text-[10px] shrink-0 ${

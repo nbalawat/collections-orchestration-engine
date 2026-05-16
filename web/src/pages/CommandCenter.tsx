@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
 import type { Event, Customer360 } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import { formatCurrency, formatNumber, formatDateTime, formatTime, channelIcon, stageBadgeColor } from '@/lib/utils'
+import { formatCurrency, formatNumber, formatDateTime, formatTime, channelIcon, stageBadgeColor, humanEventLabel } from '@/lib/utils'
 import {
   Activity, DollarSign, Users, AlertTriangle, TrendingUp, Brain, Shield,
   ChevronRight, X, Phone, MessageSquare, Mail, Monitor, Zap, Clock,
@@ -28,55 +28,6 @@ interface WSEvent {
   event_id?: string
   event_category?: string
   [key: string]: unknown
-}
-
-function eventLabel(eventType: string): string {
-  const labels: Record<string, string> = {
-    sms_sent: 'SMS Sent',
-    sms_received: 'SMS Received',
-    sms_delivered: 'SMS Delivered',
-    call_connected_rpc: 'Voice Call',
-    call_initiated: 'Call Initiated',
-    call_completed: 'Call Completed',
-    call_outcome_logged: 'Call Outcome',
-    email_sent: 'Email Sent',
-    email_delivered: 'Email Delivered',
-    email_opened: 'Email Opened',
-    email_bounced: 'Email Bounced',
-    payment_received: 'Payment Received',
-    payment_posted: 'Payment Posted',
-    payment_failed: 'Payment Failed',
-    strategy_evaluation: 'Strategy Evaluated',
-    strategy_override: 'Strategy Override',
-    ai_reasoning_trace: 'AI Reasoning',
-    ai_agent_action: 'AI Agent Action',
-    journey_stage_change: 'Stage Change',
-    journey_started: 'Journey Started',
-    ptp_created: 'PTP Created',
-    ptp_broken: 'PTP Broken',
-    ptp_fulfilled: 'PTP Fulfilled',
-    compliance_check: 'Compliance Check',
-    compliance_flag_raised: 'Compliance Flag',
-    dialer_campaign_loaded: 'Dialer Campaign',
-    dialer_call_attempted: 'Dialer Attempt',
-    digital_message_sent: 'Digital Message Sent',
-    digital_message_received: 'Digital Message Received',
-    hardship_detected: 'Hardship Detected',
-    escalation_triggered: 'Escalation',
-  }
-  if (labels[eventType]) return labels[eventType]
-  if (eventType.startsWith('blocked:')) return `Blocked: ${eventType.slice(8).replace(/_/g, ' ')}`
-  if (eventType.startsWith('compliance:')) return `Compliance: ${eventType.slice(11).replace(/_/g, ' ')}`
-  if (eventType.startsWith('stage_change:')) {
-    const parts = eventType.slice(13)
-    return parts.includes('->') ? parts.replace('->', ' → ') : `Stage: ${parts}`
-  }
-  if (eventType.startsWith('ai_reasoning:')) return `AI: ${eventType.slice(13).replace(/_/g, ' ')}`
-  return eventType
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/Rpc$/, '')
-    .trim()
 }
 
 function categoryForFilter(event: WSEvent): string {
@@ -149,7 +100,7 @@ function EventRow({ event, onClick, selected }: EventRowProps) {
         <span className={`channel-${channel} shrink-0`} />
         <span className="text-sm shrink-0">{channelIcon(channel)}</span>
         <span className="text-xs font-mono text-slate-500 shrink-0 w-20 truncate">{displayId}</span>
-        <span className="text-sm text-slate-700 truncate">{eventLabel(eventType)}</span>
+        <span className="text-sm text-slate-700 truncate">{humanEventLabel(eventType)}</span>
         {intent && (
           <span className={`badge text-[10px] shrink-0 ${
             intent.toUpperCase().includes('HARDSHIP') ? 'badge-purple' :
@@ -317,7 +268,7 @@ function CustomerDetailPanel({ customer360, customerId, traces, onClose }: Custo
                 <div className="absolute -left-[5px] top-2.5 w-2 h-2 rounded-full bg-slate-300" />
                 <span className="text-sm shrink-0">{channelIcon(evt.channel)}</span>
                 <div className="min-w-0 flex-1">
-                  <span className="text-xs text-slate-700">{eventLabel(evt.event_type)}</span>
+                  <span className="text-xs text-slate-700">{humanEventLabel(evt.event_type)}</span>
                   {evt.intent && (
                     <span className="badge badge-blue text-[9px] ml-1.5">{evt.intent.toUpperCase()}</span>
                   )}

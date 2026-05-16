@@ -11,6 +11,7 @@ import {
   formatTime,
   channelIcon,
   stageBadgeColor,
+  humanEventLabel,
 } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import {
@@ -41,48 +42,6 @@ import {
   ArrowRight,
   Activity,
 } from 'lucide-react'
-
-function eventLabel(event_type: string, payload?: Record<string, unknown>): string {
-  const labels: Record<string, string> = {
-    sms_sent: 'SMS Sent',
-    sms_received: 'SMS Received',
-    sms_delivered: 'SMS Delivered',
-    email_sent: 'Email Sent',
-    email_delivered: 'Email Delivered',
-    email_opened: 'Email Opened',
-    email_bounced: 'Email Bounced',
-    call_connected_rpc: 'Voice Call Connected',
-    call_completed: 'Voice Call Completed',
-    dialer_attempt: 'Dialer Attempt',
-    payment_received: 'Payment Received',
-    strategy_evaluation: 'Strategy Evaluated',
-    ai_reasoning_trace: 'AI Reasoning',
-    journey_stage_change: 'Journey Stage Change',
-    compliance_check: 'Compliance Check',
-  }
-  if (labels[event_type]) return labels[event_type]
-
-  if (event_type.startsWith('blocked:')) {
-    return `Blocked: ${event_type.slice(8).replace(/_/g, ' ')}`
-  }
-  if (event_type.startsWith('compliance:')) {
-    const ct = event_type.slice(11)
-    const passed = payload?.passed
-    return `Compliance: ${ct.replace(/_/g, ' ')}${passed === true ? ' ✓' : passed === false ? ' ✗' : ''}`
-  }
-  if (event_type.startsWith('stage_change:')) {
-    const parts = event_type.slice(13)
-    return parts.includes('->') ? parts.replace('->', ' → ') : `Stage: ${parts}`
-  }
-  if (event_type.startsWith('ai_reasoning:')) {
-    return `AI: ${event_type.slice(13).replace(/_/g, ' ')}`
-  }
-
-  return event_type
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
-}
 
 function eventCategoryIcon(event_type: string, category: string): string {
   if (event_type.startsWith('blocked:') || event_type.startsWith('compliance:') || category === 'compliance') return '🛡'
@@ -290,7 +249,7 @@ function TimelineEvent({ event, isLive }: TimelineEventProps) {
         ) : (
           <span className="text-sm">{eventCategoryIcon(event.event_type, event.event_category)}</span>
         )}
-        <span className="text-sm font-semibold text-slate-900">{eventLabel(event.event_type, event.payload)}</span>
+        <span className="text-sm font-semibold text-slate-900">{humanEventLabel(event.event_type, event.payload)}</span>
         <span className="text-xs text-slate-400 ml-auto whitespace-nowrap">{formatDateTime(event.occurred_at)}</span>
       </div>
 
