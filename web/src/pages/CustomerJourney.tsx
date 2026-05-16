@@ -42,7 +42,7 @@ import {
   Activity,
 } from 'lucide-react'
 
-function eventLabel(event_type: string): string {
+function eventLabel(event_type: string, payload?: Record<string, unknown>): string {
   const labels: Record<string, string> = {
     sms_sent: 'SMS Sent',
     sms_received: 'SMS Received',
@@ -60,13 +60,37 @@ function eventLabel(event_type: string): string {
     journey_stage_change: 'Journey Stage Change',
     compliance_check: 'Compliance Check',
   }
-  return (
-    labels[event_type] ??
-    event_type
-      .split('_')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ')
-  )
+  if (labels[event_type]) return labels[event_type]
+
+  if (event_type.startsWith('blocked:')) {
+    return `Blocked: ${event_type.slice(8).replace(/_/g, ' ')}`
+  }
+  if (event_type.startsWith('compliance:')) {
+    const ct = event_type.slice(11)
+    const passed = payload?.passed
+    return `Compliance: ${ct.replace(/_/g, ' ')}${passed === true ? ' ✓' : passed === false ? ' ✗' : ''}`
+  }
+  if (event_type.startsWith('stage_change:')) {
+    const parts = event_type.slice(13)
+    return parts.includes('->') ? parts.replace('->', ' → ') : `Stage: ${parts}`
+  }
+  if (event_type.startsWith('ai_reasoning:')) {
+    return `AI: ${event_type.slice(13).replace(/_/g, ' ')}`
+  }
+
+  return event_type
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+function eventCategoryIcon(event_type: string, category: string): string {
+  if (event_type.startsWith('blocked:') || event_type.startsWith('compliance:') || category === 'compliance') return '🛡'
+  if (event_type.startsWith('stage_change:') || category === 'lifecycle') return '🔄'
+  if (event_type === 'strategy_evaluation' || category === 'decision') return '⚡'
+  if (event_type.startsWith('ai_reasoning:') || category === 'ai_reasoning') return '🧠'
+  if (category === 'action') return '🎯'
+  return ''
 }
 
 function channelDotColor(channel: string): string {
@@ -259,10 +283,14 @@ function TimelineEvent({ event, isLive }: TimelineEventProps) {
 
       <div className="flex items-center gap-2 flex-wrap">
         {isLive && <span className="badge badge-blue text-xs">Live</span>}
-        <span className="text-sm font-medium text-slate-700">
-          {channelIcon(event.channel)} {directionLabel(event.direction)}
-        </span>
-        <span className="text-sm font-semibold text-slate-900">{eventLabel(event.event_type)}</span>
+        {event.channel ? (
+          <span className="text-sm font-medium text-slate-700">
+            {channelIcon(event.channel)} {directionLabel(event.direction)}
+          </span>
+        ) : (
+          <span className="text-sm">{eventCategoryIcon(event.event_type, event.event_category)}</span>
+        )}
+        <span className="text-sm font-semibold text-slate-900">{eventLabel(event.event_type, event.payload)}</span>
         <span className="text-xs text-slate-400 ml-auto whitespace-nowrap">{formatDateTime(event.occurred_at)}</span>
       </div>
 

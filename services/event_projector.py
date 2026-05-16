@@ -46,6 +46,42 @@ class EventProjector:
 
         await self.consumer.consume(self._handle)
 
+    def _extract_event_type(self, topic: str, value: dict) -> str:
+        if value.get("event_type"):
+            return value["event_type"]
+        if topic == Topics.DECISIONS:
+            return value.get("decision_type", "strategy_evaluation")
+        if topic == Topics.COMPLIANCE:
+            ct = value.get("check_type", "")
+            passed = value.get("passed")
+            if value.get("action_blocked"):
+                return f"blocked:{value['action_blocked']}"
+            return f"compliance:{ct}" if ct else "compliance_check"
+        if topic == Topics.LIFECYCLE:
+            fs, ts = value.get("from_stage", ""), value.get("to_stage", "")
+            if fs and ts:
+                return f"stage_change:{fs}->{ts}"
+            return f"stage_change:{ts}" if ts else "lifecycle"
+        if topic == Topics.AI_REASONING:
+            return f"ai_reasoning:{value.get('agent_type', 'unknown')}"
+        if topic == Topics.ACTIONS:
+            return value.get("action_type", "action_dispatched")
+        return topic.split(".")[-1]
+
+    def _extract_payload(self, topic: str, value: dict) -> dict:
+        base = value.get("payload", {})
+        if topic == Topics.DECISIONS:
+            return {**base, "decision_type": value.get("decision_type"), "strategy_version": value.get("strategy_version"), "policy_name": value.get("policy_name")}
+        if topic == Topics.COMPLIANCE:
+            return {**base, "check_type": value.get("check_type"), "passed": value.get("passed"), "rule_name": value.get("rule_name"), "action_blocked": value.get("action_blocked"), **value.get("details", {})}
+        if topic == Topics.LIFECYCLE:
+            return {**base, "from_stage": value.get("from_stage"), "to_stage": value.get("to_stage"), "reason": value.get("reason"), "triggered_by": value.get("triggered_by")}
+        if topic == Topics.AI_REASONING:
+            return {**base, "agent_type": value.get("agent_type"), "action_taken": value.get("action_taken"), "confidence": value.get("confidence"), "escalated": value.get("escalated"), "tokens_used": value.get("tokens_used"), "latency_ms": value.get("latency_ms"), "model": value.get("model")}
+        if topic == Topics.ACTIONS:
+            return {**base, "action_type": value.get("action_type"), "status": value.get("status")}
+        return base
+
     async def _handle(self, topic: str, key: bytes | None, value: dict):
         customer_id = value.get("customer_id", "")
         event_id = value.get("event_id", str(uuid.uuid4()))
@@ -60,6 +96,9 @@ class EventProjector:
             Topics.AI_REASONING: "ai_reasoning",
             Topics.AI_QUALITY: "ai_quality",
         }
+
+        event_type = self._extract_event_type(topic, value)
+        payload = self._extract_payload(topic, value)
 
         try:
             await self.db.execute("""
@@ -76,10 +115,10 @@ class EventProjector:
                 value.get("workflow_id"),
                 value.get("channel"),
                 value.get("direction"),
-                value.get("event_type", topic.split(".")[-1]),
+                event_type,
                 category_map.get(topic, "unknown"),
                 value.get("intent"),
-                json.dumps(value.get("payload", {})),
+                json.dumps({k: v for k, v in payload.items() if v is not None}),
                 uuid.UUID(value["correlation_id"]) if value.get("correlation_id") and len(value.get("correlation_id", "")) == 36 else None,
                 value.get("source_service"),
             )

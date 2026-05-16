@@ -65,6 +65,13 @@ function eventLabel(eventType: string): string {
     escalation_triggered: 'Escalation',
   }
   if (labels[eventType]) return labels[eventType]
+  if (eventType.startsWith('blocked:')) return `Blocked: ${eventType.slice(8).replace(/_/g, ' ')}`
+  if (eventType.startsWith('compliance:')) return `Compliance: ${eventType.slice(11).replace(/_/g, ' ')}`
+  if (eventType.startsWith('stage_change:')) {
+    const parts = eventType.slice(13)
+    return parts.includes('->') ? parts.replace('->', ' → ') : `Stage: ${parts}`
+  }
+  if (eventType.startsWith('ai_reasoning:')) return `AI: ${eventType.slice(13).replace(/_/g, ' ')}`
   return eventType
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase())
