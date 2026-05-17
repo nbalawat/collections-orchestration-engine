@@ -177,7 +177,7 @@ The plugin ships with a test harness in `tests/`:
 ./tests/run-evals.sh --command engagement-init
 ```
 
-**Structural checks** validate that every skill / command / agent / template is well-formed: required frontmatter, correct field names, trigger conditions present, body sections complete, manifest references valid, etc. Runs in ~5 seconds with no API cost. **130 checks pass at v0.1.0.**
+**Structural checks** validate that every skill / command / agent / template is well-formed: required frontmatter, correct field names, trigger conditions present, body sections complete, manifest references valid, etc. Runs in ~5 seconds with no API cost. **175 checks pass at v0.2.0.**
 
 **Behavioral checks** validate that each skill triggers when it should (and not when it shouldn't), and each slash command produces the expected output artifacts. Defined in `tests/scenarios/`; manual run procedure in `tests/CHECKLIST.md`. Costs ~$0.70 per full run.
 

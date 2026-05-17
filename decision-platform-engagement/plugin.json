@@ -1,6 +1,6 @@
 {
   "name": "decision-platform-engagement",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Reusable Claude Code plugin for building stakeholder-grade decision platforms in regulated industries. Captures the methodology, patterns, and artifacts proven on a bank-grade collections orchestration POC.",
   "author": "Naveen Balawat",
   "keywords": [
