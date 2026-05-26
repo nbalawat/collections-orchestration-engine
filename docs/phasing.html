@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Collections Platform — Phasing &amp; Rationale</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#0f172a;--ink2:#334155;--muted:#64748b;--line:#e2e8f0;--soft:#f8fafc;
+    --brand:#0f766e;
+    --p1:#0369a1;--p1bg:#eff6ff;--p1ln:#bfdbfe;
+    --p2:#0f766e;--p2bg:#ecfdf5;--p2ln:#a7f3d0;
+    --p3:#7c3aed;--p3bg:#f5f3ff;--p3ln:#ddd6fe;
+    --warn:#b45309;--warnbg:#fffbeb;--warnln:#fde68a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:#fff;color:var(--ink);}
+  body{font:15px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .page{max-width:1100px;margin:0 auto;padding:46px 54px 110px;}
+
+  .cover{border-bottom:4px solid var(--ink);padding-bottom:26px;margin-bottom:18px;}
+  .cover .eyebrow{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);margin-bottom:12px;}
+  .cover h1{font:700 35px/1.13 Georgia,"Iowan Old Style",serif;margin:0 0 8px;}
+  .cover .lede{font-size:16.5px;color:var(--ink2);max-width:780px;margin:0;}
+
+  h2{font:700 23px/1.2 Georgia,serif;margin:50px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--ink);}
+  h3{font:700 16px/1.3 -apple-system,sans-serif;margin:22px 0 8px;}
+  p{margin:10px 0;color:var(--ink2);} ul{margin:8px 0;padding-left:20px;} li{margin-bottom:5px;color:var(--ink2);}
+  strong{color:var(--ink);}
+  code{font:12.5px/1 ui-monospace,monospace;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;}
+
+  /* Principles */
+  .principles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0;}
+  .pr{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--soft);}
+  .pr .t{font-weight:700;color:var(--ink);font-size:14px;margin-bottom:4px;}
+  .pr .d{font-size:13px;color:var(--ink2);}
+  .pr .n{font:700 11px/1 ui-monospace,monospace;color:var(--brand);}
+
+  /* Timeline */
+  .timeline{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:22px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .tl{padding:0;border-right:1px solid var(--line);}
+  .tl:last-child{border-right:0;}
+  .tl .hd{padding:12px 16px;color:#fff;}
+  .tl .hd .ph{font:700 11px/1 ui-monospace,monospace;letter-spacing:.1em;opacity:.85;}
+  .tl .hd .nm{font:700 17px/1.2 Georgia,serif;margin-top:3px;}
+  .tl .hd .wk{font:600 11px/1 ui-monospace,monospace;margin-top:5px;opacity:.85;}
+  .tl1 .hd{background:var(--p1);} .tl2 .hd{background:var(--p2);} .tl3 .hd{background:var(--p3);}
+  .tl .bd{padding:12px 16px;font-size:12.5px;color:var(--ink2);}
+  .tl .bd .goal{font-weight:700;color:var(--ink);display:block;margin-bottom:4px;}
+
+  /* Phase block */
+  .phase{border:1px solid var(--line);border-radius:12px;margin:26px 0;overflow:hidden;page-break-inside:avoid;}
+  .phase-hd{padding:16px 22px;color:#fff;}
+  .phase-hd .ph{font:700 11px/1 ui-monospace,monospace;letter-spacing:.1em;opacity:.85;}
+  .phase-hd .nm{font:700 22px/1.2 Georgia,serif;margin-top:4px;}
+  .phase-hd .meta{font:600 12px/1.4 ui-monospace,monospace;margin-top:6px;opacity:.9;}
+  .ph1 .phase-hd{background:var(--p1);} .ph2 .phase-hd{background:var(--p2);} .ph3 .phase-hd{background:var(--p3);}
+  .phase-bd{padding:20px 22px;}
+
+  .scope{border-radius:10px;padding:14px 16px;margin-bottom:16px;}
+  .ph1 .scope{background:var(--p1bg);border:1px solid var(--p1ln);}
+  .ph2 .scope{background:var(--p2bg);border:1px solid var(--p2ln);}
+  .ph3 .scope{background:var(--p3bg);border:1px solid var(--p3ln);}
+  .scope .sh{font:700 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;}
+  .ph1 .scope .sh{color:var(--p1);} .ph2 .scope .sh{color:var(--p2);} .ph3 .scope .sh{color:var(--p3);}
+  .scope ul{margin:4px 0;columns:2;column-gap:24px;}
+  .scope li{font-size:13px;break-inside:avoid;}
+
+  .why{margin:14px 0;}
+  .why .wh{font:700 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:8px;}
+  .why ol{margin:6px 0;padding-left:20px;} .why li{margin-bottom:8px;}
+  .why li b{color:var(--ink);}
+
+  .exit{background:var(--soft);border-left:3px solid var(--brand);border-radius:0 6px 6px 0;padding:12px 16px;margin-top:12px;font-size:13.5px;}
+  .exit b{color:var(--ink);}
+
+  /* sub-sprints */
+  .sprints{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0;}
+  .sp{border:1px solid var(--p1ln);border-radius:8px;padding:10px 12px;background:#fff;}
+  .sp .w{font:700 10px/1 ui-monospace,monospace;color:var(--p1);letter-spacing:.06em;}
+  .sp .t{font-weight:700;font-size:13px;margin:4px 0;color:var(--ink);}
+  .sp .d{font-size:12px;color:var(--ink2);}
+
+  /* dependency map */
+  .dep{border:1px solid var(--line);border-radius:10px;padding:16px 20px;background:var(--soft);margin:14px 0;font:13px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink2);overflow-x:auto;}
+  .dep .lbl{color:var(--brand);font-weight:700;}
+
+  .callout{background:var(--warnbg);border:1px solid var(--warnln);border-radius:10px;padding:14px 18px;margin:16px 0;font-size:13.5px;color:#7c3a06;}
+  .callout b{color:#7c2d12;}
+
+  table.rm{border-collapse:collapse;width:100%;margin:14px 0;font-size:13px;}
+  table.rm th,table.rm td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top;}
+  table.rm th{background:var(--ink);color:#fff;font:600 11px/1.3 ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;}
+  table.rm td:first-child{font-weight:700;color:var(--ink);}
+  .dotp{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;}
+  .dp1{background:var(--p1);} .dp2{background:var(--p2);} .dp3{background:var(--p3);}
+
+  /* Module-first phasing cards */
+  .mcard{border:1px solid var(--line);border-radius:11px;margin:16px 0;overflow:hidden;page-break-inside:avoid;}
+  .mcard-hd{display:flex;align-items:baseline;gap:12px;padding:11px 18px;background:var(--ink);color:#fff;}
+  .mcard-hd .no{font:700 11px/1 ui-monospace,monospace;color:#94a3b8;letter-spacing:.1em;}
+  .mcard-hd .nm{font:700 16px/1.2 Georgia,serif;flex:1;}
+  .mcard-cols{display:grid;grid-template-columns:repeat(3,1fr);}
+  .mcol{padding:12px 16px;border-right:1px solid var(--line);}
+  .mcol:last-child{border-right:0;}
+  .mcol .ch{font:700 10px/1 ui-monospace,monospace;letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .mcol .ch .pill{font-size:9px;padding:2px 6px;border-radius:4px;}
+  .mcol.c1 .ch{color:var(--p1);} .mcol.c1{background:var(--p1bg);}
+  .mcol.c2 .ch{color:var(--p2);} .mcol.c2{background:var(--p2bg);}
+  .mcol.c3 .ch{color:var(--p3);} .mcol.c3{background:var(--p3bg);}
+  .mcol ul{margin:0;padding-left:16px;} .mcol li{font-size:12px;color:var(--ink2);margin-bottom:4px;}
+  .mlogic{padding:9px 18px;background:var(--soft);border-top:1px solid var(--line);font-size:12.5px;color:var(--ink2);}
+  .mlogic b{color:var(--brand);font:700 10px/1 ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;margin-right:6px;}
+
+  .foot{margin-top:30px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:12px;}
+  @media print{.page{padding:20px;max-width:none;}.phase,.timeline,.callout{page-break-inside:avoid;}h2{page-break-after:avoid;}a{color:inherit;}.scope ul{columns:1;}}
+  @media (max-width:840px){.principles,.timeline,.sprints{grid-template-columns:1fr;}.scope ul{columns:1;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <div class="eyebrow">Phasing &amp; Rationale · Prepared for [Bank Name] · Confidential</div>
+    <h1>Delivery Phasing &amp; Justification</h1>
+    <p class="lede">How we sequence the ten modules into three phases — and, more importantly, <em>why</em> in this order. The sequencing is driven by dependency, regulatory non-negotiables, early proof of value, and deferring the expensive, slow, and speculative work until the foundation is validated.</p>
+  </div>
+
+  <!-- Principles -->
+  <h2>The six principles behind the sequence</h2>
+  <p>Every phasing decision below traces back to one of these. They are the "why" behind the "what."</p>
+  <div class="principles">
+    <div class="pr"><div class="n">01</div><div class="t">Foundation has the highest dependency fan-out</div><div class="d">The event spine and orchestration core sit under everything. Nothing can be built, demoed, or integrated until they exist — so they go first, full stop.</div></div>
+    <div class="pr"><div class="n">02</div><div class="t">Compliance is a gate, not a feature</div><div class="d">You cannot legally pilot a collections platform that <em>can</em> dial outside hours or contact a bankrupt customer. Compliance ships in Phase 1 — retrofitting it later is far costlier and riskier.</div></div>
+    <div class="pr"><div class="n">03</div><div class="t">Prove value &amp; credibility early</div><div class="d">A buying committee funds what they can see working. Governed AI and live stakeholder surfaces land in Phase 1 so the platform is demonstrably real, not a promise.</div></div>
+    <div class="pr"><div class="n">04</div><div class="t">Decouple from slow, external dependencies</div><div class="d">Live core-banking integration is owned by vendor/IT timelines and bank change control — slow and political. We prove the contract with mocks in P1 so nothing else waits on it.</div></div>
+    <div class="pr"><div class="n">05</div><div class="t">Defer scale until the shape is proven</div><div class="d">Multi-region, autoscaling, and exactly-once guarantees optimize an architecture. Building them before the logic is validated means optimizing the wrong thing.</div></div>
+    <div class="pr"><div class="n">06</div><div class="t">Automation needs a baseline of real data</div><div class="d">Auto-A/B promotion, auto-retraining, and optimization loops are only meaningful once real production outcomes exist to learn from. They come last by necessity, not preference.</div></div>
+  </div>
+
+  <!-- Timeline -->
+  <h2>The three phases at a glance</h2>
+  <div class="timeline">
+    <div class="tl tl1"><div class="hd"><div class="ph">PHASE 1</div><div class="nm">Foundation</div><div class="wk">Weeks 0–12</div></div><div class="bd"><span class="goal">Stakeholder-grade, compliant, demonstrable.</span>The orchestrator, compliance gates, governed AI, risk model, lakehouse, and persona surfaces — running on your data for one product line.</div></div>
+    <div class="tl tl2"><div class="hd"><div class="ph">PHASE 2</div><div class="nm">Production</div><div class="wk">Months 3–6</div></div><div class="bd"><span class="goal">Live, integrated, validated.</span>Real channels &amp; core integration, model-risk sign-off, RBAC/SSO, SLOs, resilience. Production go-live for the first product line.</div></div>
+    <div class="tl tl3"><div class="hd"><div class="ph">PHASE 3</div><div class="nm">Scale</div><div class="wk">Months 6–12</div></div><div class="bd"><span class="goal">Automated, broadened, resilient.</span>Auto-A/B, auto-retrain, specialist agents, omnichannel, multi-product, MDM, multi-region DR.</div></div>
+  </div>
+
+  <!-- PHASE 1 -->
+  <div class="phase ph1">
+    <div class="phase-hd"><div class="ph">PHASE 1</div><div class="nm">Foundation — Weeks 0–12</div><div class="meta">Goal: a credible, compliant, demonstrable platform on your data, one product line</div></div>
+    <div class="phase-bd">
+
+      <h3>Internal sequencing — three four-week blocks</h3>
+      <div class="sprints">
+        <div class="sp"><div class="w">WEEKS 0–4</div><div class="t">1A · The Spine</div><div class="d">Orchestration core, event bus, signal routing, data model + onboarding contracts, backend-mock integrations.</div></div>
+        <div class="sp"><div class="w">WEEKS 4–8</div><div class="t">1B · Decision &amp; Control</div><div class="d">Policy engine (segment/treatment/routing), compliance gates, WORM audit, decision audit log.</div></div>
+        <div class="sp"><div class="w">WEEKS 8–12</div><div class="t">1C · Intelligence &amp; Surfaces</div><div class="d">Governed AI agents, risk model + feature store, lakehouse + lineage, persona UIs, demo.</div></div>
+      </div>
+
+      <div class="scope">
+        <div class="sh">In scope (the Phase-1 must-do core)</div>
+        <ul>
+          <li>Per-customer journey workflow + event bus</li>
+          <li>Signal routing &amp; durable timers</li>
+          <li>Segmentation / treatment / routing as policy</li>
+          <li>Decision audit log + policy hot-reload</li>
+          <li>Reg F gates (frequency, time-of-day, validation)</li>
+          <li>Bankruptcy/SCRA suppression + WORM audit</li>
+          <li>Digital-channel + quality/compliance AI agents</li>
+          <li>Structured decision capture + escalation</li>
+          <li>Feature store + risk model + scoring</li>
+          <li>A/B significance + roll-rate forecast</li>
+          <li>Medallion lakehouse + lineage + marts</li>
+          <li>Channel adapters + inbound normalization (simulated)</li>
+          <li>Persona surfaces (Ops, Customer, AI, Compliance, Risk)</li>
+          <li>Adapter contracts + data onboarding (mocked core)</li>
+          <li>Service heartbeats, traces, AI cost observability</li>
+        </ul>
+      </div>
+
+      <div class="why">
+        <div class="wh">Why these, why now</div>
+        <ol>
+          <li><b>The spine is the prerequisite for everything (Principle 1).</b> Until events flow and journeys are durable, there is nothing for policy, AI, or UIs to attach to. It is the only thing that <em>must</em> be week 0.</li>
+          <li><b>Compliance ships with — not after — the first action (Principle 2).</b> The moment the platform can send anything, it must be unable to send a non-compliant thing. Building the gate alongside the first dispatch is an order of magnitude cheaper than bolting it on once actions already flow.</li>
+          <li><b>AI decision capture must exist from the first AI action (Principle 3).</b> You cannot backfill reasoning traces. If the structured-capture harness isn't there when an agent makes its first decision, that decision is unauditable forever. So it's foundational, not a later enhancement.</li>
+          <li><b>The risk model is needed to demo and to seed Phase 2 (Principle 3).</b> A working model proves the analytics story to the CRO and generates the very performance data the model-risk team will validate in Phase 2.</li>
+          <li><b>Core integration is mocked, deliberately (Principle 4).</b> We build and prove the adapter contract end-to-end against mocks so Phase 1 never blocks on the bank's core-vendor change calendar. The contract is real; only the source is simulated.</li>
+        </ol>
+      </div>
+
+      <div class="exit"><b>Exit criteria:</b> the platform runs scripted, real-data journeys end-to-end; every action is compliance-gated and audited; AI decisions are captured and explainable; the risk model scores live; all five persona surfaces read live data. <b>The buying committee sees the platform working on their portfolio.</b></div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase ph2">
+    <div class="phase-hd"><div class="ph">PHASE 2</div><div class="nm">Production — Months 3–6</div><div class="meta">Goal: live integration, model-risk sign-off, resilience → production go-live for one product line</div></div>
+    <div class="phase-bd">
+      <div class="scope">
+        <div class="sh">In scope</div>
+        <ul>
+          <li>Live core-banking integration (real SoR)</li>
+          <li>Production channel vendors (SMS/email/dialer/IVR)</li>
+          <li>SR 11-7 model-risk artifacts + validation</li>
+          <li>Champion/challenger live in production</li>
+          <li>RBAC &amp; SSO</li>
+          <li>OpenTelemetry, SLOs, alerting, runbooks</li>
+          <li>Scale &amp; resilience hardening</li>
+          <li>BI / warehouse integration</li>
+          <li>Human-in-the-loop review queues</li>
+          <li>UDAAP/FCRA/state compliance expansion</li>
+        </ul>
+      </div>
+
+      <div class="why">
+        <div class="wh">Why these are Phase 2 — not earlier, not later</div>
+        <ol>
+          <li><b>Live core integration follows a proven contract (Principle 4).</b> By Phase 2 the adapter contract is validated against mocks, so the live connection is a swap of the data source — not a discovery exercise — even though it runs on the bank's slower change calendar.</li>
+          <li><b>Model-risk validation needs Phase-1 data.</b> SR 11-7 sign-off requires real model performance, calibration, and stability evidence. That evidence is generated by the Phase-1 model running on real data — so validation is a Phase-2 gate <em>before</em> the model drives production decisions.</li>
+          <li><b>Production-grade ops is sized to real load.</b> SLOs, autoscaling, and DR are calibrated against observed Phase-1 throughput and failure modes — defining them earlier would be guesswork (Principle 5).</li>
+          <li><b>Champion/challenger goes live once there's volume to split.</b> A/B is only meaningful at production volume; Phase 1 proves the framework, Phase 2 runs it for real.</li>
+          <li><b>Compliance breadth expands against a working gate.</b> Reg F (the highest-risk surface) is live from Phase 1; UDAAP/FCRA/state rules extend the same proven enforcement mechanism rather than inventing a new one.</li>
+        </ol>
+      </div>
+
+      <div class="exit"><b>Exit criteria:</b> the platform acts on live core data through real channels; models are MRM-approved; access is controlled; SLOs and DR runbooks are in place. <b>Production go-live for the first product line.</b></div>
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase ph3">
+    <div class="phase-hd"><div class="ph">PHASE 3</div><div class="nm">Scale — Months 6–12</div><div class="meta">Goal: automate, broaden across products, and reach enterprise resilience</div></div>
+    <div class="phase-bd">
+      <div class="scope">
+        <div class="sh">In scope</div>
+        <ul>
+          <li>Auto-promotion of winning challengers</li>
+          <li>Automated model retraining + drift alerting</li>
+          <li>Treatment / uplift optimization loop</li>
+          <li>Specialist agents (dispute/settlement/hardship)</li>
+          <li>Agent evaluation harness + model A/B</li>
+          <li>Omnichannel sequencing + agent desktop</li>
+          <li>Business-user policy authoring UI</li>
+          <li>Multi-product rollout</li>
+          <li>Master data management / entity resolution</li>
+          <li>Multi-region DR + autoscaling</li>
+        </ul>
+      </div>
+
+      <div class="why">
+        <div class="wh">Why these come last (by necessity, not preference)</div>
+        <ol>
+          <li><b>Automation requires a baseline of real outcomes (Principle 6).</b> Auto-promotion, auto-retrain, and optimization loops learn from production results. Until Phase 2 has produced months of real outcome data, these would be automating decisions with no evidence behind them.</li>
+          <li><b>Multi-product reuse needs one product proven first.</b> Rolling the platform to a second and third product line is low-risk <em>after</em> the patterns are battle-tested on the first — and high-risk before.</li>
+          <li><b>Enterprise resilience optimizes a known-good design (Principle 5).</b> Multi-region DR and autoscaling are expensive to build and change. Doing them last means doing them once, against a stable architecture.</li>
+          <li><b>Business-user authoring &amp; specialist agents are breadth, not foundation.</b> They multiply value once the core decisioning and governed-AI patterns are trusted in production — premature if introduced before that trust exists.</li>
+        </ol>
+      </div>
+
+      <div class="exit"><b>Exit criteria:</b> strategies and models self-optimize within governance guardrails; the platform spans multiple product lines; resilience meets enterprise/regulatory standards. <b>The platform is a self-improving, enterprise-wide capability.</b></div>
+    </div>
+  </div>
+
+  <!-- MODULE-FIRST VIEW -->
+  <h2>Phasing by module</h2>
+  <p>The same plan, read the other way: for each of the ten modules, what lands in each phase — and the one-line logic that shapes its curve. Most modules are deliberately <strong>front-loaded into Phase 1</strong>; integration, automation, and resilience are where later phases do their work.</p>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">01</span><span class="nm">Orchestration Core</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Journey workflow + state machine</li><li>Event bus + signal routing</li><li>Durable timers</li><li>Replayable event history</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>Scale &amp; resilience hardening</li><li>Managed control plane</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Workflow versioning + migration</li><li>Exactly-once guarantees</li><li>Multi-region</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Front-loaded — it's the foundation everything attaches to; later phases only harden a proven core.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">02</span><span class="nm">Strategy &amp; Decisioning</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Segment / treatment / routing as policy</li><li>Decision audit log</li><li>Policy hot-reload</li><li>Explainable decision trace</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>Champion/challenger live</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Auto-promotion gates</li><li>Business-user authoring UI</li><li>Optimization loop</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Policy core ships in P1; A/B needs production volume; automation needs outcome data — so it tails into P3.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">03</span><span class="nm">Compliance &amp; Controls</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Reg F: frequency / time-of-day / validation</li><li>Bankruptcy / SCRA suppression</li><li>Pre-action gate + WORM audit</li><li>Inline regulation citations</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>UDAAP / FCRA / state expansion</li><li>Examiner reporting basics</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Reg change-management workflow</li><li>Full attestation packs</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Highest-risk surface (Reg F) is non-deferrable → all in P1; breadth later extends the same proven enforcement mechanism.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">04</span><span class="nm">Governed AI Agents</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Digital + quality/compliance agents</li><li>Structured decision capture</li><li>Tool-constrained actions + escalation</li><li>Reasoning traces, cost, injection mitigation</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>Human-in-the-loop review queues</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Specialist agents (dispute/settlement)</li><li>Agent evaluation harness</li><li>Prompt/model A/B + versioning</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Capture + guardrails must exist from the first AI action (un-backfillable) → P1; specialization &amp; governance tooling layer on later.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">05</span><span class="nm">Risk &amp; ML Platform</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Feature store + risk model</li><li>Online scoring + explainability</li><li>A/B significance</li><li>Roll-rate + recovery curves</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>SR 11-7 model-risk artifacts</li><li>MRM validation &amp; sign-off</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Drift detection &amp; alerting</li><li>Automated retraining</li><li>Uplift / treatment optimization</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Working model in P1 to demo &amp; seed data; formal validation gates production in P2; automation needs production history → P3.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">06</span><span class="nm">Data &amp; Lakehouse</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Bronze / Silver / Gold medallion</li><li>End-to-end lineage</li><li>Curated marts</li><li>Ad-hoc SQL query</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>BI / warehouse integration</li><li>Regulatory &amp; finance marts</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Real-time feature serving</li><li>Data-quality contracts</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Medallion + lineage are foundational for trust &amp; audit → P1; enterprise reporting &amp; real-time serving extend it later.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">07</span><span class="nm">Channel Integration</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Channel adapters (simulated)</li><li>Inbound normalization</li><li>Intent capture</li><li>Vendor-adapter contract</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>Production vendor integrations</li><li>(SMS / email / dialer / IVR)</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Omnichannel sequencing + fatigue</li><li>Agent-desktop telephony</li><li>Two-way conversational messaging</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Contract + normalization proven in P1 on simulators; real vendors in P2; advanced orchestration once the basics are live.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">08</span><span class="nm">Stakeholder Experience (UI)</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Ops / Customer / AI surfaces</li><li>Compliance &amp; Strategy console</li><li>Risk &amp; ML surface</li><li>Live real-data dashboards</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>RBAC &amp; SSO</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Full agent desktop</li><li>Configurable / white-label</li><li>Mobile / supervisor views</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Demo surfaces in P1 for buying-committee credibility; enterprise access control in P2; breadth &amp; tailoring in P3.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">09</span><span class="nm">Platform Operations</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Service heartbeats</li><li>Event-bus topology + consumer lag</li><li>End-to-end trace viewer</li><li>AI cost / token observability</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>OpenTelemetry + SLOs + alerting</li><li>On-call runbooks</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Autoscaling &amp; capacity mgmt</li><li>DR + multi-region resilience</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Observable from day one; production SLOs sized to real P1 load; resilience optimizes a known-good design → P3.</div>
+  </div>
+
+  <div class="mcard">
+    <div class="mcard-hd"><span class="no">10</span><span class="nm">Integration &amp; Data Onboarding</span></div>
+    <div class="mcard-cols">
+      <div class="mcol c1"><div class="ch">Phase 1 · Foundation</div><ul><li>Adapter contracts (core/payments/CRM)</li><li>Data onboarding</li><li>Mock / sandbox integration</li></ul></div>
+      <div class="mcol c2"><div class="ch">Phase 2 · Production</div><ul><li>Live core integration (FIS/Fiserv/JH)</li><li>CDC / near-real-time sync</li></ul></div>
+      <div class="mcol c3"><div class="ch">Phase 3 · Scale</div><ul><li>Master data management</li><li>Payment &amp; arrangement posting back</li></ul></div>
+    </div>
+    <div class="mlogic"><b>Logic</b>Prove the contract with mocks in P1 (decoupled from slow core calendars); live core in P2; MDM &amp; write-back in P3.</div>
+  </div>
+
+  <!-- Dependency map -->
+  <h2>Dependency graph</h2>
+  <p>Modules as nodes, dependencies as arrows. An arrow <b>A → B</b> means <b>B needs A</b> — A must exist (or its data must flow) before B can work. The graph reads top-down: external inputs feed the spine, the spine enables control and intelligence, and everything surfaces through the UI while Platform Ops observes it all.</p>
+
+  <div style="border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff;overflow-x:auto;">
+  <svg viewBox="0 0 980 660" width="100%" style="min-width:720px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"/>
+      </marker>
+      <marker id="arrD" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#cbd5e1"/>
+      </marker>
+    </defs>
+
+    <!-- layer bands -->
+    <g font-family="ui-monospace,Menlo,monospace" font-size="10" font-weight="700" letter-spacing="1.5" fill="#94a3b8">
+      <text x="14" y="52">INPUTS</text>
+      <text x="14" y="150">SPINE</text>
+      <text x="14" y="250">CONTROL</text>
+      <text x="14" y="350">INTELLIGENCE / DATA</text>
+      <text x="14" y="470">VISIBILITY</text>
+      <text x="14" y="575">RUN</text>
+    </g>
+
+    <!-- ===== EDGES (drawn first, under nodes) ===== -->
+    <g stroke="#94a3b8" stroke-width="1.6" fill="none" marker-end="url(#arr)">
+      <!-- inputs -> spine -->
+      <path d="M250,68 C250,100 430,100 445,118"/>
+      <path d="M770,68 C770,100 600,100 545,118"/>
+      <!-- spine -> control -->
+      <path d="M430,162 C400,195 330,200 320,222"/>
+      <path d="M560,162 C600,195 660,200 660,222"/>
+      <!-- control -> intelligence -->
+      <path d="M300,266 C290,300 250,305 235,322"/>
+      <path d="M340,266 C420,300 470,305 480,322"/>
+      <!-- spine -> data (lakehouse) -->
+      <path d="M575,162 C720,210 760,270 760,322"/>
+      <!-- spine -> risk (events) -->
+      <path d="M520,162 C520,240 500,300 495,322"/>
+      <!-- lakehouse -> risk (features) -->
+      <path d="M690,344 C600,360 560,358 575,352"/>
+    </g>
+
+    <!-- converging into UI (lighter) -->
+    <g stroke="#cbd5e1" stroke-width="1.4" fill="none" marker-end="url(#arr)">
+      <path d="M215,366 C230,420 360,430 380,448"/>
+      <path d="M495,366 C495,410 490,430 490,448"/>
+      <path d="M760,366 C760,420 620,432 600,448"/>
+      <path d="M320,266 C200,360 300,430 380,449"/>
+      <path d="M660,266 C760,360 640,432 600,450"/>
+    </g>
+
+    <!-- Platform Ops observes all (dashed) -->
+    <g stroke="#cbd5e1" stroke-width="1.3" fill="none" stroke-dasharray="4 4" marker-end="url(#arrD)">
+      <path d="M360,560 C200,540 200,200 430,162"/>
+      <path d="M620,560 C820,540 820,360 800,366"/>
+      <path d="M490,536 L490,496"/>
+    </g>
+
+    <!-- ===== NODES ===== -->
+    <!-- helper styling via inline -->
+    <!-- INPUTS -->
+    <g>
+      <rect x="150" y="40" width="200" height="30" rx="7" fill="#f0f9ff" stroke="#7dd3fc"/>
+      <text x="250" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">07 · Channel Integration</text>
+    </g>
+    <g>
+      <rect x="670" y="40" width="200" height="30" rx="7" fill="#f0f9ff" stroke="#7dd3fc"/>
+      <text x="770" y="60" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0c4a6e">10 · Integration / Onboarding</text>
+    </g>
+
+    <!-- SPINE -->
+    <g>
+      <rect x="360" y="118" width="260" height="44" rx="9" fill="#0f172a"/>
+      <text x="490" y="139" text-anchor="middle" font-size="14" font-weight="800" fill="#fff">01 · Orchestration Core</text>
+      <text x="490" y="154" text-anchor="middle" font-size="10" fill="#94a3b8">event spine · durable workflows</text>
+    </g>
+
+    <!-- CONTROL -->
+    <g>
+      <rect x="210" y="222" width="190" height="44" rx="9" fill="#ecfdf5" stroke="#6ee7b7"/>
+      <text x="305" y="243" text-anchor="middle" font-size="12.5" font-weight="700" fill="#065f46">02 · Strategy &amp; Decisioning</text>
+      <text x="305" y="257" text-anchor="middle" font-size="9.5" fill="#047857">policy · decision audit</text>
+    </g>
+    <g>
+      <rect x="560" y="222" width="190" height="44" rx="9" fill="#fef2f2" stroke="#fca5a5"/>
+      <text x="655" y="243" text-anchor="middle" font-size="12.5" font-weight="700" fill="#991b1b">03 · Compliance &amp; Controls</text>
+      <text x="655" y="257" text-anchor="middle" font-size="9.5" fill="#b91c1c">gates · WORM audit</text>
+    </g>
+
+    <!-- INTELLIGENCE / DATA -->
+    <g>
+      <rect x="120" y="322" width="190" height="44" rx="9" fill="#f5f3ff" stroke="#c4b5fd"/>
+      <text x="215" y="343" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">04 · Governed AI Agents</text>
+      <text x="215" y="357" text-anchor="middle" font-size="9.5" fill="#7c3aed">structured decisions</text>
+    </g>
+    <g>
+      <rect x="400" y="322" width="190" height="44" rx="9" fill="#f5f3ff" stroke="#c4b5fd"/>
+      <text x="495" y="343" text-anchor="middle" font-size="12.5" font-weight="700" fill="#5b21b6">05 · Risk &amp; ML Platform</text>
+      <text x="495" y="357" text-anchor="middle" font-size="9.5" fill="#7c3aed">model · A/B · forecast</text>
+    </g>
+    <g>
+      <rect x="670" y="322" width="190" height="44" rx="9" fill="#fffbeb" stroke="#fcd34d"/>
+      <text x="765" y="343" text-anchor="middle" font-size="12.5" font-weight="700" fill="#92400e">06 · Data &amp; Lakehouse</text>
+      <text x="765" y="357" text-anchor="middle" font-size="9.5" fill="#b45309">medallion · lineage</text>
+    </g>
+
+    <!-- VISIBILITY -->
+    <g>
+      <rect x="300" y="448" width="380" height="44" rx="9" fill="#f1f5f9" stroke="#94a3b8"/>
+      <text x="490" y="469" text-anchor="middle" font-size="13" font-weight="800" fill="#1e293b">08 · Stakeholder Experience (UI)</text>
+      <text x="490" y="483" text-anchor="middle" font-size="9.5" fill="#64748b">reads every layer above · one surface per persona</text>
+    </g>
+
+    <!-- RUN -->
+    <g>
+      <rect x="300" y="536" width="380" height="44" rx="9" fill="#f8fafc" stroke="#cbd5e1" stroke-dasharray="5 4"/>
+      <text x="490" y="557" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">09 · Platform Operations</text>
+      <text x="490" y="571" text-anchor="middle" font-size="9.5" fill="#64748b">observes every service (dashed) — heartbeats · traces · cost</text>
+    </g>
+
+    <!-- edge labels -->
+    <g font-size="9.5" fill="#64748b" font-style="italic">
+      <text x="250" y="100" text-anchor="middle">events in</text>
+      <text x="735" y="100" text-anchor="middle">account data</text>
+      <text x="628" y="352" text-anchor="middle">features</text>
+    </g>
+  </svg>
+  </div>
+
+  <p style="font-size:13px;color:var(--muted);margin-top:8px;">
+    <b style="color:var(--ink)">How to read it:</b> the dark <b>Orchestration Core</b> is the hub — both external inputs (channels, core integration) feed it, and everything downstream depends on it. Control (strategy + compliance) sits directly on the spine; intelligence (AI, risk) and data (lakehouse) consume events and decisions; the UI reads everything; Platform Ops observes all (dashed). <b>The deeper a node sits, the later it can start — that is the phasing, made structural.</b>
+  </p>
+
+  <div class="callout">
+    <b>The single most important sequencing decision:</b> compliance and AI-decision capture are built <em>into</em> the foundation, not added later. Both are effectively impossible to retrofit cleanly — an un-gated action can violate regulation the moment it ships, and an AI decision made without structured capture is unauditable forever. Everything else can be layered; these two cannot.
+  </div>
+
+  <!-- Summary table -->
+  <h2>What gates each phase transition</h2>
+  <table class="rm">
+    <thead><tr><th>Transition</th><th>Gate (must be true to proceed)</th><th>De-risks</th></tr></thead>
+    <tbody>
+      <tr><td><span class="dotp dp1"></span>P1 → <span class="dotp dp2"></span>P2</td><td>End-to-end journeys run on real data; every action gated &amp; audited; AI decisions captured; risk model scoring; surfaces live.</td><td>Architecture &amp; compliance validated before spending on live integration &amp; scale.</td></tr>
+      <tr><td><span class="dotp dp2"></span>P2 → <span class="dotp dp3"></span>P3</td><td>Live core integration stable; models MRM-approved; SLOs met; production go-live achieved for one product line.</td><td>Automation &amp; multi-product built on a proven, in-production base with real outcome data.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="foot">
+    Phasing is our recommendation; final scope and timing are fixed with you in the scoping session. Week/month ranges are indicative and assume one product line for the initial production target. The sequencing rationale (Principles 1–6) is the durable part — exact dates flex with your change-control and vendor calendars.
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Collections Platform — Detailed Feature Catalog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#0f172a;--ink2:#334155;--muted:#64748b;--line:#e2e8f0;--soft:#f8fafc;
+    --brand:#0f766e;
+    --s:#047857;--s-bg:#ecfdf5;--s-ln:#a7f3d0;   /* simple */
+    --m:#b45309;--m-bg:#fffbeb;--m-ln:#fde68a;   /* medium */
+    --c:#b91c1c;--c-bg:#fef2f2;--c-ln:#fecaca;   /* complex */
+    --st:#0369a1;--lt:#7c3aed;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:#fff;color:var(--ink);}
+  body{font:14.5px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .page{max-width:1140px;margin:0 auto;padding:46px 52px 110px;}
+
+  .cover{border-bottom:4px solid var(--ink);padding-bottom:26px;margin-bottom:18px;}
+  .cover .eyebrow{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);margin-bottom:12px;}
+  .cover h1{font:700 34px/1.14 Georgia,"Iowan Old Style",serif;margin:0 0 8px;}
+  .cover .lede{font-size:16px;color:var(--ink2);max-width:780px;margin:0;}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 6px;align-items:center;}
+  .badge{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 ui-monospace,monospace;letter-spacing:.04em;padding:5px 10px;border-radius:6px;text-transform:uppercase;}
+  .b-s{color:var(--s);background:var(--s-bg);border:1px solid var(--s-ln);}
+  .b-m{color:var(--m);background:var(--m-bg);border:1px solid var(--m-ln);}
+  .b-c{color:var(--c);background:var(--c-bg);border:1px solid var(--c-ln);}
+  .legend .desc{font-size:12.5px;color:var(--muted);}
+
+  .countbar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 6px;}
+  .countbar div{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--soft);text-align:center;}
+  .countbar .n{font:800 22px/1 -apple-system,sans-serif;color:var(--ink);}
+  .countbar .l{font:600 10px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:5px;}
+
+  .howto{background:var(--soft);border-left:4px solid var(--brand);border-radius:0 8px 8px 0;padding:16px 20px;margin:18px 0 8px;font-size:13.5px;color:var(--ink2);}
+  .howto b{color:var(--ink);}
+
+  h2{font:700 22px/1.2 Georgia,serif;margin:46px 0 6px;}
+  .modsub{font-size:13.5px;color:var(--muted);margin:0 0 12px;}
+  .modnum{font:700 12px/1 ui-monospace,monospace;color:var(--brand);letter-spacing:.1em;}
+
+  table.ft{border-collapse:collapse;width:100%;margin:8px 0 4px;font-size:13.5px;page-break-inside:auto;}
+  table.ft th{background:var(--ink);color:#fff;font:600 10.5px/1.3 ui-monospace,monospace;letter-spacing:.05em;text-transform:uppercase;text-align:left;padding:9px 12px;}
+  table.ft td{border-bottom:1px solid var(--line);padding:10px 12px;vertical-align:top;}
+  table.ft tr:nth-child(even) td{background:var(--soft);}
+  table.ft td.feat{font-weight:700;color:var(--ink);width:26%;}
+  table.ft td.why{color:var(--ink2);width:58%;}
+  table.ft td.cx{width:16%;white-space:nowrap;}
+  .ph{display:inline-block;font:600 9px/1 ui-monospace,monospace;letter-spacing:.04em;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;}
+  .ph-st{color:var(--st);background:#eff6ff;border:1px solid #bfdbfe;}
+  .ph-lt{color:var(--lt);background:#f5f3ff;border:1px solid #ddd6fe;}
+
+  .foot{margin-top:32px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:12px;}
+  @media print{.page{padding:20px;max-width:none;}table.ft tr{page-break-inside:avoid;}h2{page-break-after:avoid;}a{color:inherit;}}
+  @media (max-width:820px){.countbar{grid-template-columns:1fr 1fr;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="cover">
+    <div class="eyebrow">Feature Catalog · Prepared for [Bank Name] · Confidential</div>
+    <h1>Detailed Feature Catalog &amp; Complexity</h1>
+    <p class="lede">Every feature we propose, what business outcome it drives, and an honest build-complexity tag. Use this to scope Phase 1, sequence the roadmap, and size effort. Complexity reflects engineering effort and delivery risk — not importance.</p>
+  </div>
+
+  <div class="legend">
+    <span class="badge b-s">● Simple</span><span class="desc">Config, policy, or UI on existing rails — days. Low risk.</span>
+  </div>
+  <div class="legend">
+    <span class="badge b-m">● Medium</span><span class="desc">New service, model, or integration using a known pattern — 1–3 weeks. Moderate risk.</span>
+  </div>
+  <div class="legend">
+    <span class="badge b-c">● Complex</span><span class="desc">Distributed-systems guarantees, regulatory depth, core integration, or ML governance — weeks to months. Higher risk.</span>
+  </div>
+  <div class="legend" style="margin-top:6px">
+    <span class="ph ph-st">P1</span><span class="desc">Short-term / Phase 1 must-have</span>
+    <span class="ph ph-lt">P2–3</span><span class="desc">Long-term / later phase</span>
+  </div>
+
+  <div class="countbar">
+    <div><div class="n">74</div><div class="l">Features cataloged</div></div>
+    <div><div class="n">18</div><div class="l"><span style="color:var(--s)">Simple</span></div></div>
+    <div><div class="n">33</div><div class="l"><span style="color:var(--m)">Medium</span></div></div>
+    <div><div class="n">23</div><div class="l"><span style="color:var(--c)">Complex</span></div></div>
+  </div>
+
+  <div class="howto">
+    <b>How to read this:</b> each feature is tagged <span class="badge b-s" style="padding:1px 6px">Simple</span> / <span class="badge b-m" style="padding:1px 6px">Medium</span> / <span class="badge b-c" style="padding:1px 6px">Complex</span> for effort &amp; risk, and <span class="ph ph-st">P1</span> or <span class="ph ph-lt">P2–3</span> for phasing. Most Phase 1 value comes from Simple + Medium features layered onto the orchestration core; the Complex items are where we recommend focused design time and where most of the risk lives.
+  </div>
+
+  <!-- 01 -->
+  <h2><span class="modnum">MODULE 01</span><br>Orchestration Core</h2>
+  <p class="modsub">The spine — durable per-customer workflows over a real-time event bus.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Per-customer journey workflow <span class="ph ph-st">P1</span></td><td class="why">Models each account's collections lifecycle explicitly — nothing falls through cracks, current state is always known and queryable.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Real-time event bus <span class="ph ph-st">P1</span></td><td class="why">Channels, decisions, and actions flow as events — decoupled, replayable, and the basis for everything else scaling independently.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Signal routing (event → workflow) <span class="ph ph-st">P1</span></td><td class="why">Inbound customer activity reaches the right journey instantly — no nightly batch lag between a customer paying and the platform reacting.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Durable timers <span class="ph ph-st">P1</span></td><td class="why">Time-bound obligations (promise-to-pay dates, Reg F 5-day validation window) fire reliably even across restarts or outages.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Replayable event history <span class="ph ph-st">P1</span></td><td class="why">Any case can be reconstructed exactly — for audit, dispute defense, or debugging — because the event log is the source of truth.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Workflow versioning &amp; in-flight migration <span class="ph ph-lt">P2–3</span></td><td class="why">Change the collections process without breaking the millions of journeys already running under the old logic.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Exactly-once processing <span class="ph ph-lt">P2–3</span></td><td class="why">Prevents double-dials, duplicate notices, and double-postings — directly avoids compliance violations and customer-trust damage.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Scale to millions of journeys <span class="ph ph-lt">P2–3</span></td><td class="why">Handles the full portfolio at peak without re-architecture — the difference between a pilot and an enterprise platform.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 02 -->
+  <h2><span class="modnum">MODULE 02</span><br>Strategy &amp; Decisioning</h2>
+  <p class="modsub">Next-best-action as versioned policy the business owns — not logic buried in code.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Segmentation as policy <span class="ph ph-st">P1</span></td><td class="why">Risk/value/behavior segments are defined and changed by the business without an engineering release.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Treatment selection as policy <span class="ph ph-st">P1</span></td><td class="why">Next-best-action per segment is transparent and tunable — strategy lives where risk owners can see and adjust it.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Channel routing as policy <span class="ph ph-st">P1</span></td><td class="why">Picks the right channel given preference, consent, and fatigue — improves contact rates while respecting limits.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Decision audit log <span class="ph ph-st">P1</span></td><td class="why">Every decision is defensible: what was known, which rule version fired, what came out. Examiner- and board-ready.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Policy hot-reload <span class="ph ph-st">P1</span></td><td class="why">Strategy changes go live in minutes, not a release cycle — react to portfolio shifts the same day.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Explainable decision trace <span class="ph ph-st">P1</span></td><td class="why">Non-technical staff see exactly "why we did that" — builds trust with compliance and front-line teams.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Champion/challenger allocation <span class="ph ph-lt">P2–3</span></td><td class="why">Test a new strategy on a controlled slice of the portfolio before betting the whole book on it.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Auto-promotion gates <span class="ph ph-lt">P2–3</span></td><td class="why">A winning challenger is promoted only when the lift is statistically proven — removes guesswork and politics.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Business-user policy authoring UI <span class="ph ph-lt">P2–3</span></td><td class="why">Risk authors strategy directly with an approval workflow — removes the engineering bottleneck entirely.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Treatment optimization loop <span class="ph ph-lt">P2–3</span></td><td class="why">The platform learns which treatments actually change outcomes and shifts allocation toward them.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 03 -->
+  <h2><span class="modnum">MODULE 03</span><br>Compliance &amp; Controls</h2>
+  <p class="modsub">Enforced at the millisecond an action is taken — tamper-evident, citation-backed.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Reg F call-frequency caps <span class="ph ph-st">P1</span></td><td class="why">Automatically prevents the 7-calls-in-7-days style violations that drive fines and consent orders.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Time-of-day windows (per timezone) <span class="ph ph-st">P1</span></td><td class="why">Never contacts outside 8am–9pm in the customer's own timezone — computed automatically, not left to agents.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Validation-notice tracking (§1006.34) <span class="ph ph-st">P1</span></td><td class="why">The 5-day validation-information obligation is tracked and enforced per case — a common exam finding, eliminated.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Bankruptcy / SCRA / cease suppression <span class="ph ph-st">P1</span></td><td class="why">Legally-required suppression applies instantly and portfolio-wide the moment a flag is set — no manual list scrubbing.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Pre-action compliance gate <span class="ph ph-st">P1</span></td><td class="why">Blocks a non-compliant action <em>before</em> it leaves the building — prevention, not month-end detection.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">WORM tamper-evident audit <span class="ph ph-st">P1</span></td><td class="why">The compliance record can't be altered after the fact — examiners and litigation hold can trust it implicitly.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Inline regulation citations <span class="ph ph-st">P1</span></td><td class="why">Each rule cites the statute it enforces — the system is audit-ready by construction, not by after-the-fact mapping.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">UDAAP / FCRA / state-law coverage <span class="ph ph-lt">P2–3</span></td><td class="why">Extends the compliance surface to the full regulatory landscape, not just Reg F.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Regulatory change-management workflow <span class="ph ph-lt">P2–3</span></td><td class="why">New or changed rules are versioned, reviewed, and attested — a defensible governance trail for the regulator.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Examiner-ready reporting packs <span class="ph ph-lt">P2–3</span></td><td class="why">Produce exam evidence in minutes instead of weeks of manual data pulls.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 04 -->
+  <h2><span class="modnum">MODULE 04</span><br>Governed AI Agents</h2>
+  <p class="modsub">AI that decides inside guardrails — every action structured, logged, and escalatable.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Structured decision capture <span class="ph ph-st">P1</span></td><td class="why">Every AI action is logged with its inputs, reasoning, and confidence — answers "why did the AI do that?" for any regulator.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Tool-constrained actions <span class="ph ph-st">P1</span></td><td class="why">The agent can only take pre-approved, validated actions — it physically cannot "go rogue" with a free-form instruction.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Confidence-based escalation <span class="ph ph-st">P1</span></td><td class="why">The AI defers to a human when unsure or when a case is sensitive — automation with a safety valve.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Digital-channel agent <span class="ph ph-st">P1</span></td><td class="why">Decides and drafts SMS/email treatment within policy at scale — frees human capacity for high-value cases.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Quality &amp; compliance reviewer agent <span class="ph ph-st">P1</span></td><td class="why">A second AI reviews interactions for compliance and quality — continuous QA instead of 2% sampling.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Reasoning-trace surfacing <span class="ph ph-st">P1</span></td><td class="why">The model's step-by-step reasoning is visible in the UI — builds trust and supports audit/model-risk review.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Per-decision cost tracking <span class="ph ph-st">P1</span></td><td class="why">Know exactly what each AI action costs in tokens/dollars — FinOps control before spend gets out of hand.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Prompt-injection mitigation <span class="ph ph-st">P1</span></td><td class="why">Customer text is passed as structured, validated fields — it can't hijack the agent into unauthorized actions.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Specialist agents (dispute / settlement / hardship) <span class="ph ph-lt">P2–3</span></td><td class="why">Expert handling for complex case types that need domain-specific judgment.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Human-in-the-loop review queues <span class="ph ph-lt">P2–3</span></td><td class="why">Governed handoff with SLA tracking for sensitive decisions — auditable human oversight at scale.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Agent evaluation harness <span class="ph ph-lt">P2–3</span></td><td class="why">Continuously measures agent quality and catches regressions before they reach customers.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Prompt/model A/B &amp; versioning <span class="ph ph-lt">P2–3</span></td><td class="why">Upgrade models safely and prove the new one is actually better before full rollout.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 05 -->
+  <h2><span class="modnum">MODULE 05</span><br>Risk &amp; ML Platform</h2>
+  <p class="modsub">Models, A/B, and forecasting in the CRO's and model-risk team's language.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Feature store <span class="ph ph-st">P1</span></td><td class="why">One consistent definition of every customer feature for both training and live scoring — kills train/serve skew.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Risk model (worsening probability) <span class="ph ph-st">P1</span></td><td class="why">Predicts which accounts will deteriorate so effort and treatment concentrate where they change the outcome.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Online scoring API + explainability <span class="ph ph-st">P1</span></td><td class="why">Real-time scores with top contributing factors — usable in decisions and defensible to model risk.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">A/B significance (lift, p-value, n) <span class="ph ph-st">P1</span></td><td class="why">Proves a strategy actually worked with statistics, not anecdote — the evidence a CRO needs to scale a change.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Roll-rate / Markov forecasting <span class="ph ph-st">P1</span></td><td class="why">Projects how the portfolio will move across buckets over 30/60/90 days — drives staffing and loss forecasting.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Recovery &amp; cure curves <span class="ph ph-st">P1</span></td><td class="why">Measures recovery effectiveness by cohort over time — the core KPI for collections performance.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">SR 11-7 model-risk artifacts <span class="ph ph-lt">P2–3</span></td><td class="why">Gives model risk management exactly what it needs to validate and approve models for production use.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Drift detection &amp; alerting <span class="ph ph-lt">P2–3</span></td><td class="why">Catches model degradation before it silently costs money or creates fair-lending risk.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Automated retraining <span class="ph ph-lt">P2–3</span></td><td class="why">Models stay current with portfolio behavior without manual retraining cycles.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Uplift / treatment optimization <span class="ph ph-lt">P2–3</span></td><td class="why">Targets treatment at accounts where it actually changes behavior — maximizes recovery per contact dollar.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 06 -->
+  <h2><span class="modnum">MODULE 06</span><br>Data &amp; Lakehouse</h2>
+  <p class="modsub">Medallion lakehouse with end-to-end lineage — every event traceable, queryable.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Bronze raw capture <span class="ph ph-st">P1</span></td><td class="why">Immutable landing of every event — the replay and audit foundation; you can never lose what happened.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Silver typed / compacted <span class="ph ph-st">P1</span></td><td class="why">Clean, typed, analytics-ready data — fast queries without touching the operational store.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Gold curated marts <span class="ph ph-st">P1</span></td><td class="why">Business-ready customer-360 / portfolio / compliance views — analysts consume answers, not raw tables.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">End-to-end lineage <span class="ph ph-st">P1</span></td><td class="why">Trace any datum from the wire to the mart — essential for data trust, audit, and root-cause analysis.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Ad-hoc SQL query layer <span class="ph ph-st">P1</span></td><td class="why">Analysts self-serve answers over the lake without waiting on engineering.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">BI / warehouse integration <span class="ph ph-lt">P2–3</span></td><td class="why">Plugs into your existing reporting stack so the platform feeds, not replaces, enterprise BI.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Regulatory &amp; finance reporting marts <span class="ph ph-lt">P2–3</span></td><td class="why">Pre-built marts for compliance and finance reporting reduce month-end effort and error.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Real-time feature serving <span class="ph ph-lt">P2–3</span></td><td class="why">Sub-second features from the lake power online scoring without a separate pipeline.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Data-quality monitoring &amp; contracts <span class="ph ph-lt">P2–3</span></td><td class="why">Catches bad upstream data before it corrupts decisions or models.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 07 -->
+  <h2><span class="modnum">MODULE 07</span><br>Channel Integration</h2>
+  <p class="modsub">Inbound/outbound across SMS, email, voice, dialer — normalized to one model.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Channel adapters <span class="ph ph-st">P1</span></td><td class="why">Uniform handling of SMS, email, voice, and dialer so the orchestrator logic is channel-agnostic.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Inbound normalization <span class="ph ph-st">P1</span></td><td class="why">Every channel becomes one canonical event — the orchestrator treats a text and a call the same way.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Intent capture <span class="ph ph-st">P1</span></td><td class="why">Detects hardship / PTP / dispute / settlement intent so treatment responds to what the customer actually said.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Vendor-adapter contract pattern <span class="ph ph-st">P1</span></td><td class="why">Swap or add a vendor without touching the core — avoids lock-in and de-risks vendor changes.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Production vendor integrations <span class="ph ph-lt">P2–3</span></td><td class="why">Real SMS/email gateways, dialer, and IVR for live delivery at portfolio scale.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Omnichannel sequencing &amp; fatigue mgmt <span class="ph ph-lt">P2–3</span></td><td class="why">Coordinates channels and caps total contact so customers aren't over-contacted across silos.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Live agent-desktop telephony / screen-pop <span class="ph ph-lt">P2–3</span></td><td class="why">Human agents work calls inside the platform with full context surfaced automatically.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Two-way conversational messaging <span class="ph ph-lt">P2–3</span></td><td class="why">Real-time SMS/chat dialogue at scale, driven by the governed agents.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 08 -->
+  <h2><span class="modnum">MODULE 08</span><br>Stakeholder Experience (UI)</h2>
+  <p class="modsub">One purpose-built surface per persona — not one generic dashboard for all.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Operations Floor <span class="ph ph-st">P1</span></td><td class="why">A real-time portfolio cockpit for ops — see the whole book working at a glance.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Customer Story / 360 <span class="ph ph-st">P1</span></td><td class="why">The full per-customer narrative and timeline — the audit trail an agent or examiner reads.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">AI Explorer <span class="ph ph-st">P1</span></td><td class="why">Inspect every AI decision with its reasoning — the surface that earns trust in the automation.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Compliance &amp; Strategy console <span class="ph ph-st">P1</span></td><td class="why">CCO and risk see gates firing and strategies running live — governance you can watch, not just report on.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Risk &amp; ML surface <span class="ph ph-st">P1</span></td><td class="why">The CRO sees models, A/B results, and forecasts in their own language.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Live real-data dashboards <span class="ph ph-st">P1</span></td><td class="why">Nothing is mocked — credibility with a buying committee depends on real numbers moving.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">RBAC &amp; SSO <span class="ph ph-lt">P2–3</span></td><td class="why">Enterprise access control and single sign-on — a hard requirement for production rollout.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Full agent desktop <span class="ph ph-lt">P2–3</span></td><td class="why">A complete case-handling workspace for collectors — notes, actions, telephony in one place.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Configurable dashboards / white-label <span class="ph ph-lt">P2–3</span></td><td class="why">Tailor surfaces per role and brand without code changes.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Mobile / supervisor views <span class="ph ph-lt">P2–3</span></td><td class="why">On-the-go oversight for team leads and managers.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+  </tbody></table>
+
+  <!-- 09 -->
+  <h2><span class="modnum">MODULE 09</span><br>Platform Operations</h2>
+  <p class="modsub">Operable from day one — health, topology, traces, cost.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Service heartbeats <span class="ph ph-st">P1</span></td><td class="why">Instantly see if any service is unhealthy, with throughput and error rates — no guessing during an incident.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Event-bus topology &amp; consumer lag <span class="ph ph-st">P1</span></td><td class="why">Spot processing bottlenecks (per partition) before they become customer-facing outages.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">End-to-end trace viewer <span class="ph ph-st">P1</span></td><td class="why">Follow one event across every service hop in seconds — collapses debugging from hours to minutes.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">AI cost / token observability <span class="ph ph-st">P1</span></td><td class="why">Control AI spend with per-agent, per-day visibility — FinOps before the bill surprises anyone.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">OpenTelemetry, SLOs, alerting <span class="ph ph-lt">P2–3</span></td><td class="why">Production-grade observability tied to service-level objectives and paging.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">On-call runbooks <span class="ph ph-lt">P2–3</span></td><td class="why">Fast, consistent incident response — every failure mode has a tested playbook.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Autoscaling &amp; capacity management <span class="ph ph-lt">P2–3</span></td><td class="why">Handles month-end and campaign peaks cost-efficiently without manual intervention.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">DR &amp; multi-region resilience <span class="ph ph-lt">P2–3</span></td><td class="why">Survives a region failure — a regulatory and operational requirement for a system of record-adjacent platform.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <!-- 10 -->
+  <h2><span class="modnum">MODULE 10</span><br>Integration &amp; Data Onboarding</h2>
+  <p class="modsub">Connecting to core banking, payments, and CRM behind clean contracts.</p>
+  <table class="ft"><thead><tr><th>Feature</th><th>Why it helps</th><th>Complexity</th></tr></thead><tbody>
+    <tr><td class="feat">Adapter contracts (core / payments / CRM) <span class="ph ph-st">P1</span></td><td class="why">The orchestrator never couples directly to a system of record — integrations can change without a rewrite.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Data onboarding (accounts / customers / payments) <span class="ph ph-st">P1</span></td><td class="why">Gets your real data into the platform so decisions run on truth, not samples.</td><td class="cx"><span class="badge b-m">Medium</span></td></tr>
+    <tr><td class="feat">Mock / sandbox integration <span class="ph ph-st">P1</span></td><td class="why">Proves the integration contract end-to-end before the (slow, political) live core connection — de-risks Phase 2.</td><td class="cx"><span class="badge b-s">Simple</span></td></tr>
+    <tr><td class="feat">Live core integration (FIS / Fiserv / Jack Henry) <span class="ph ph-lt">P2–3</span></td><td class="why">Real-time truth from the system of record — the platform acts on current balances and payments.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">CDC pipelines / near-real-time sync <span class="ph ph-lt">P2–3</span></td><td class="why">Keeps the platform continuously current with the core instead of nightly snapshots.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Master data management / entity resolution <span class="ph ph-lt">P2–3</span></td><td class="why">One accurate customer view across products and systems — no duplicate or conflicting records.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+    <tr><td class="feat">Payment &amp; arrangement posting back <span class="ph ph-lt">P2–3</span></td><td class="why">Closes the loop — arrangements and payments captured in the platform flow back into the core.</td><td class="cx"><span class="badge b-c">Complex</span></td></tr>
+  </tbody></table>
+
+  <div class="foot">
+    Complexity = engineering effort &amp; delivery risk (Simple: days; Medium: 1–3 weeks; Complex: weeks–months), not business importance — several Simple features are Phase-1 must-haves. Phasing (<span class="ph ph-st">P1</span> short term / <span class="ph ph-lt">P2–3</span> long term) is our recommendation; final scope is set with you in the scoping session. Counts are indicative. All feature claims reflect capabilities proven in the working reference platform.
+  </div>
+
+</div>
+</body>
+</html>

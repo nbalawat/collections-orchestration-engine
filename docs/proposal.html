@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Collections Orchestration Platform — Proposal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --ink:#0f172a; --ink2:#334155; --muted:#64748b; --line:#e2e8f0; --soft:#f8fafc;
+    --brand:#0f766e; --brand2:#0e7490; --accent:#b45309;
+    --st:#0369a1; --st-bg:#eff6ff; --st-ln:#bfdbfe;     /* short term */
+    --lt:#7c3aed; --lt-bg:#f5f3ff; --lt-ln:#ddd6fe;     /* long term */
+    --must:#b91c1c; --must-bg:#fef2f2; --must-ln:#fecaca;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:#fff;color:var(--ink);}
+  body{font:15px/1.6 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+  .page{max-width:1120px;margin:0 auto;padding:48px 56px 110px;}
+
+  /* Cover */
+  .cover{border-bottom:4px solid var(--ink);padding-bottom:30px;margin-bottom:14px;}
+  .cover .eyebrow{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);margin-bottom:14px;}
+  .cover h1{font:700 38px/1.12 Georgia,"Iowan Old Style",serif;margin:0 0 10px;letter-spacing:-.01em;}
+  .cover .lede{font-size:17px;color:var(--ink2);max-width:760px;margin:0 0 22px;}
+  .cover .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .cover .facts div{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:11px 13px;}
+  .cover .facts strong{display:block;font:600 10px/1.4 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .cover .facts span{font-weight:700;color:var(--ink);font-size:13px;}
+
+  h2{font:700 24px/1.2 Georgia,serif;margin:52px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--ink);}
+  h3{font:700 17px/1.3 -apple-system,sans-serif;margin:26px 0 10px;}
+  p{margin:10px 0;color:var(--ink2);}
+  ul{margin:8px 0;padding-left:20px;} li{margin-bottom:5px;color:var(--ink2);}
+  code{font:12.5px/1 ui-monospace,monospace;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:4px;padding:1px 5px;}
+
+  /* Approach band */
+  .approach{background:var(--soft);border-left:4px solid var(--brand);border-radius:0 8px 8px 0;padding:20px 24px;margin:22px 0 8px;}
+  .approach .l{font:700 11px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);margin-bottom:8px;}
+  .approach p{margin:6px 0;color:var(--ink);font-size:15.5px;}
+
+  /* Horizon legend */
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0;}
+  .lz{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:13px;background:#fff;}
+  .lz .sw{width:12px;height:12px;border-radius:3px;}
+  .lz b{color:var(--ink);}
+
+  /* Phase strip */
+  .phases{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0;}
+  .ph{border:1px solid var(--line);border-radius:10px;overflow:hidden;}
+  .ph .hd{padding:10px 14px;color:#fff;font:700 13px/1.2 -apple-system,sans-serif;}
+  .ph .bd{padding:12px 14px;font-size:13px;}
+  .ph .bd .when{font:600 11px/1 ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+  .ph1 .hd{background:var(--st);} .ph2 .hd{background:var(--brand);} .ph3 .hd{background:var(--lt);}
+
+  /* Module cards */
+  .mod{border:1px solid var(--line);border-radius:12px;margin:24px 0;overflow:hidden;page-break-inside:avoid;}
+  .mod-hd{display:flex;align-items:center;gap:14px;padding:15px 22px;background:var(--ink);color:#fff;}
+  .mod-hd .no{font:700 12px/1 ui-monospace,monospace;color:#94a3b8;letter-spacing:.1em;}
+  .mod-hd .nm{font:700 19px/1.2 Georgia,serif;flex:1;}
+  .mod-hd .tag{font:600 10px/1 ui-monospace,monospace;background:rgba(255,255,255,.15);padding:5px 9px;border-radius:5px;letter-spacing:.05em;text-transform:uppercase;}
+  .mod-bd{padding:18px 22px;}
+  .mod-purpose{font-size:14.5px;color:var(--ink);margin:0 0 16px;}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:8px;}
+  .col{border-radius:10px;padding:14px 16px;}
+  .col.short{background:var(--st-bg);border:1px solid var(--st-ln);}
+  .col.long{background:var(--lt-bg);border:1px solid var(--lt-ln);}
+  .col .ch{display:flex;align-items:center;gap:8px;font:700 11px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+  .col.short .ch{color:var(--st);} .col.long .ch{color:var(--lt);}
+  .col .when{font-size:11px;font-weight:600;color:var(--muted);}
+  .col ul{margin:6px 0 0;padding-left:18px;}
+  .col li{font-size:13px;color:var(--ink2);margin-bottom:5px;}
+  .must{display:inline-block;font:700 9px/1 ui-monospace,monospace;color:var(--must);background:var(--must-bg);border:1px solid var(--must-ln);border-radius:4px;padding:2px 5px;letter-spacing:.04em;margin-left:4px;vertical-align:middle;}
+
+  .feat{margin-top:6px;border-top:1px dashed var(--line);padding-top:12px;}
+  .feat .fh{font:700 10px/1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chips span{font-size:12px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:4px 9px;color:var(--ink2);}
+
+  /* Roadmap table */
+  table.rm{border-collapse:collapse;width:100%;margin:14px 0;font-size:13px;}
+  table.rm th,table.rm td{border:1px solid var(--line);padding:9px 11px;text-align:left;vertical-align:top;}
+  table.rm th{background:var(--ink);color:#fff;font:600 11px/1.3 ui-monospace,monospace;letter-spacing:.04em;text-transform:uppercase;}
+  table.rm td:first-child{font-weight:700;color:var(--ink);white-space:nowrap;}
+  table.rm tr:nth-child(even) td{background:var(--soft);}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;}
+  .d-st{background:var(--st);} .d-p2{background:var(--brand);} .d-lt{background:var(--lt);}
+
+  .closing{background:var(--ink);color:#fff;border-radius:12px;padding:26px 30px;margin:38px 0 12px;}
+  .closing h3{color:#fff;margin:0 0 12px;} .closing p{color:#cbd5e1;} .closing strong{color:#fff;}
+
+  .foot{margin-top:30px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:12px;}
+
+  @media print{.page{padding:22px;max-width:none;}.mod,.ph,.closing{page-break-inside:avoid;}h2{page-break-after:avoid;}a{color:inherit;}}
+  @media (max-width:860px){.cols,.phases,.cover .facts{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="eyebrow">Proposal · Prepared for [Bank Name] · Confidential</div>
+    <h1>Real-Time Collections Orchestration Platform</h1>
+    <p class="lede">A single decisioning platform that orchestrates every delinquent customer journey in real time — governed AI, policy-as-code compliance, and a risk &amp; analytics layer your CRO and CCO can defend to regulators and the board.</p>
+    <div class="facts">
+      <div><strong>Engagement</strong><span>Build &amp; deliver</span></div>
+      <div><strong>Phase 1</strong><span>12 weeks → working platform</span></div>
+      <div><strong>Production</strong><span>6 months, one product line</span></div>
+      <div><strong>Proof</strong><span>Working reference platform today</span></div>
+    </div>
+  </div>
+
+  <!-- Approach -->
+  <div class="approach">
+    <div class="l">Our approach</div>
+    <p>We do not start from a slide deck. We start from a <strong>working reference platform</strong> — orchestration, governed AI agents, compliance-as-code, a real lakehouse, and a trained risk model — and adapt it to your portfolio, your core systems, and your regulatory frame. That collapses the usual 9–12 month "will it even work" risk into a <strong>12-week stakeholder-grade delivery</strong>, then hardens to production from a known-good base.</p>
+    <p>This document lays out the platform as <strong>ten modules</strong>. For each: what is a <span style="color:var(--st);font-weight:700">must-do in the short term</span> to stand up a credible, compliant, demonstrable platform — versus what we layer in <span style="color:var(--lt);font-weight:700">long term</span> for scale, automation, and enterprise breadth — plus the concrete features we bring to each.</p>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="lz"><span class="sw" style="background:var(--st)"></span><b>Short term</b> — Phase 1 (0–12 wks): the must-do core</span>
+    <span class="lz"><span class="sw" style="background:var(--lt)"></span><b>Long term</b> — Phase 2–3 (3–12 mo): scale &amp; automation</span>
+    <span class="lz"><span class="must">MUST</span> non-negotiable for go-live</span>
+  </div>
+
+  <!-- Phases -->
+  <div class="phases">
+    <div class="ph ph1"><div class="hd">Phase 1 · Foundation</div><div class="bd"><div class="when">Weeks 0–12</div>Stand up the orchestrator, compliance gates, governed AI, and stakeholder surfaces on your data. Stakeholder-grade, demonstrable, audit-ready for one product line.</div></div>
+    <div class="ph ph2"><div class="hd">Phase 2 · Production</div><div class="bd"><div class="when">Months 3–6</div>Real channel + core-banking integration, model risk artifacts, scale &amp; resilience, SLOs. Production go-live for the first product line.</div></div>
+    <div class="ph ph3"><div class="hd">Phase 3 · Scale</div><div class="bd"><div class="when">Months 6–12</div>Multi-product, automation (auto-A/B, auto-retrain), advanced agents, enterprise reporting, multi-region DR.</div></div>
+  </div>
+
+  <h2>The ten modules</h2>
+
+  <!-- 1 Orchestration Core -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">01</span><span class="nm">Orchestration Core</span><span class="tag">Foundation</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">The spine. Every delinquent customer is a long-running workflow over a real-time event bus — durable, replayable, and the single place every decision and action is sequenced.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Per-customer journey workflow with delinquency state machine <span class="must">MUST</span></li>
+            <li>Event bus + signal routing (channel event → workflow) <span class="must">MUST</span></li>
+            <li>Durable execution, retries, timers (PTP deadlines, validation windows)</li>
+            <li>Event store with full per-customer history (the audit trail)</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Horizontal scale to millions of concurrent journeys</li>
+            <li>Workflow versioning &amp; safe migration of in-flight cases</li>
+            <li>Exactly-once delivery guarantees, multi-region failover</li>
+            <li>Managed control plane (e.g. MSK + managed workflow service)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Temporal workflows</span><span>Kafka event spine</span><span>Per-customer state machine</span><span>Signal bridge</span><span>Replayable history</span><span>Timer-driven SLAs</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 2 Strategy & Decisioning -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">02</span><span class="nm">Strategy &amp; Decisioning</span><span class="tag">Policy</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">The brain for "what should we do next, for whom, and through which channel" — expressed as versioned policy, not buried in code, so risk owns it and can change it safely.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Segmentation, treatment, and channel-routing as policy <span class="must">MUST</span></li>
+            <li>Every decision logged with full input context &amp; version <span class="must">MUST</span></li>
+            <li>Hot-reload of policy changes (no redeploy)</li>
+            <li>Explainable decision trace ("why did we do that?")</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Champion/challenger automation with auto-promotion gates</li>
+            <li>Business-user policy authoring UI with approval workflow</li>
+            <li>Treatment optimization loop driven by observed outcomes</li>
+            <li>Cross-product strategy library &amp; reuse</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>OPA / policy-as-code</span><span>Segmentation engine</span><span>Treatment matrix</span><span>Channel routing</span><span>Strategy versioning</span><span>Decision audit log</span><span>Champion/challenger</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 3 Compliance & Controls -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">03</span><span class="nm">Compliance &amp; Controls</span><span class="tag">Regulatory</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">Compliance enforced at the millisecond an action is taken — not reconstructed in a month-end batch. Citations live in the rules; every block is recorded, tamper-evident.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Reg F: call-frequency caps, time-of-day windows, validation notices <span class="must">MUST</span></li>
+            <li>Bankruptcy / SCRA / cease-and-desist suppression <span class="must">MUST</span></li>
+            <li>Pre-action compliance gate on every outbound <span class="must">MUST</span></li>
+            <li>Write-once, tamper-evident (WORM) audit at the data layer <span class="must">MUST</span></li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Full UDAAP / FCRA / state-law &amp; internal-policy coverage</li>
+            <li>Regulatory change management workflow with versioned attestations</li>
+            <li>Automated examiner-ready reporting packs</li>
+            <li>Consent &amp; preference management integration</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Reg F §1006 rules</span><span>Policy citations inline</span><span>Action gating</span><span>WORM triggers</span><span>Suppression engine</span><span>Validation-notice tracking</span><span>Examiner audit trail</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 4 AI Agents -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">04</span><span class="nm">Governed AI Agents</span><span class="tag">AI</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">AI that decides inside guardrails. Every agent action is a structured, logged decision with inputs, reasoning, confidence, and an escalation path — not a free-form chatbot.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Digital-channel agent (drafts/decides treatment within policy) <span class="must">MUST</span></li>
+            <li>Quality &amp; compliance reviewer agent <span class="must">MUST</span></li>
+            <li>Structured decision capture: inputs, reasoning, confidence, action <span class="must">MUST</span></li>
+            <li>Escalate-to-human on low confidence / sensitive cases <span class="must">MUST</span></li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Specialist agents: dispute triage, settlement negotiation, hardship</li>
+            <li>Human-in-the-loop review queues with SLA management</li>
+            <li>Agent evaluation harness &amp; continuous quality scoring</li>
+            <li>Model governance: versioning, A/B of prompts/models, drift alerts</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Claude-powered agents</span><span>Tool-constrained actions</span><span>record_decision capture</span><span>Reasoning traces</span><span>Confidence + escalation</span><span>Per-decision cost tracking</span><span>Prompt-injection mitigations</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 5 Risk & ML -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">05</span><span class="nm">Risk &amp; ML Platform</span><span class="tag">Analytics</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">The CRO's language: trained models with AUC and calibration, A/B with p-values, roll-rate forecasting, and the artifacts model risk management needs to validate and sign off.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Feature store + risk model (probability of worsening) <span class="must">MUST</span></li>
+            <li>Online scoring API with explainability (top contributors)</li>
+            <li>A/B statistical significance (lift, p-value, required-n)</li>
+            <li>Roll-rate / cure-curve forecasting</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>SR 11-7 model risk artifacts &amp; validation workflow</li>
+            <li>Automated retraining, drift detection, performance alerting</li>
+            <li>Treatment-optimization &amp; uplift modeling</li>
+            <li>Feature monitoring &amp; data-quality SLAs</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Feature store</span><span>Gradient-boosted risk model</span><span>Model card (AUC/Brier)</span><span>Feature importance</span><span>Markov roll-rate</span><span>Recovery curves</span><span>Two-proportion A/B test</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 6 Data & Lakehouse -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">06</span><span class="nm">Data &amp; Lakehouse</span><span class="tag">Data</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">Every event persisted across a medallion lakehouse with end-to-end lineage — one event traceable from the wire through to the curated mart, queryable on demand.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Medallion lakehouse: Bronze → Silver → Gold <span class="must">MUST</span></li>
+            <li>End-to-end event lineage across tiers <span class="must">MUST</span></li>
+            <li>Curated marts (customer 360, portfolio, compliance, strategy)</li>
+            <li>Ad-hoc SQL query over the lake</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>BI / warehouse integration &amp; semantic layer</li>
+            <li>Regulatory &amp; finance reporting marts</li>
+            <li>Real-time feature serving from the lake</li>
+            <li>Data-quality monitoring &amp; contract enforcement</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>S3 medallion</span><span>Bronze JSONL</span><span>Silver Parquet</span><span>Gold marts</span><span>6-tier lineage</span><span>DuckDB query layer</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 7 Channels -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">07</span><span class="nm">Channel Integration</span><span class="tag">Omnichannel</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">Inbound and outbound across SMS, email, voice, and dialer — normalized into one event model so the orchestrator treats every channel uniformly.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Channel adapters + inbound normalization to one event model <span class="must">MUST</span></li>
+            <li>Intent capture (hardship, PTP, dispute, settlement)</li>
+            <li>Simulated channels for non-prod &amp; demo; adapter contracts for real vendors</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Production vendor integrations (SMS/email gateways, dialer, IVR)</li>
+            <li>Omnichannel sequencing &amp; channel-fatigue management</li>
+            <li>Live agent-desktop telephony &amp; screen-pop</li>
+            <li>Two-way conversational messaging at scale</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>SMS / email / voice / dialer</span><span>Inbound normalization</span><span>Intent classification</span><span>Channel-exhaustion routing</span><span>Vendor-adapter pattern</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 8 Stakeholder UI -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">08</span><span class="nm">Stakeholder Experience</span><span class="tag">UI</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">One purpose-built surface per persona — each answering that stakeholder's first ten questions without scrolling. Not one generic dashboard for everyone.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Operations Floor, Customer Story, AI Explorer surfaces <span class="must">MUST</span></li>
+            <li>Compliance &amp; Strategy console for CCO / risk</li>
+            <li>Risk &amp; ML and Lakehouse surfaces for CRO / data</li>
+            <li>Live, real-data dashboards (no mock screens)</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Role-based access control &amp; SSO integration</li>
+            <li>Full agent desktop (case handling, telephony, notes)</li>
+            <li>Configurable dashboards &amp; white-labeling</li>
+            <li>Mobile / supervisor views</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Per-persona surfaces</span><span>Live event streams</span><span>Customer 360</span><span>AI decision explorer</span><span>Strategy console</span><span>Design system</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 9 Platform Ops -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">09</span><span class="nm">Platform Operations</span><span class="tag">Run</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">Operable from day one: service health, event-bus topology, end-to-end traces, and AI cost — so your platform team can answer "what's wrong and where" in under a minute.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Service heartbeats, throughput, latency, error rates <span class="must">MUST</span></li>
+            <li>Event-bus topology + consumer-lag monitoring</li>
+            <li>End-to-end trace viewer (one event across all hops)</li>
+            <li>AI cost &amp; token observability (FinOps)</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Full OpenTelemetry, SLOs, alerting &amp; on-call runbooks</li>
+            <li>Autoscaling &amp; capacity management</li>
+            <li>Disaster recovery &amp; multi-region resilience</li>
+            <li>Cost-allocation &amp; chargeback reporting</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Service heartbeats</span><span>Kafka topology</span><span>Consumer-lag panels</span><span>Trace viewer</span><span>Cost dashboard</span><span>Platform Ops surface</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- 10 Integration & Onboarding -->
+  <div class="mod">
+    <div class="mod-hd"><span class="no">10</span><span class="nm">Integration &amp; Data Onboarding</span><span class="tag">Connect</span></div>
+    <div class="mod-bd">
+      <p class="mod-purpose">Connecting the platform to your world — core banking, payments, and CRM — behind clean adapter contracts so the orchestrator never couples directly to a system of record.</p>
+      <div class="cols">
+        <div class="col short">
+          <div class="ch">▸ Short term <span class="when">Phase 1</span></div>
+          <ul>
+            <li>Adapter contracts for core banking, payments, CRM <span class="must">MUST</span></li>
+            <li>Account / customer / payment / contact data onboarding</li>
+            <li>Mock/sandbox integrations to prove the contract end-to-end</li>
+          </ul>
+        </div>
+        <div class="col long">
+          <div class="ch">▸ Long term <span class="when">Phase 2–3</span></div>
+          <ul>
+            <li>Live core integration (FIS / Fiserv / Jack Henry, etc.)</li>
+            <li>Change-data-capture pipelines &amp; near-real-time sync</li>
+            <li>Master data management &amp; entity resolution</li>
+            <li>Payments &amp; arrangement posting back to the core</li>
+          </ul>
+        </div>
+      </div>
+      <div class="feat"><div class="fh">What we bring</div><div class="chips">
+        <span>Adapter pattern</span><span>Canonical event contract</span><span>Backend-mock harness</span><span>Seed &amp; ingestion tooling</span><span>No direct SoR coupling</span>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Roadmap summary -->
+  <h2>Delivery summary — what lands when</h2>
+  <table class="rm">
+    <thead><tr><th>Module</th><th><span class="dot d-st"></span>Phase 1 · Short term (0–12 wks)</th><th><span class="dot d-p2"></span>Phase 2 · Production (3–6 mo)</th><th><span class="dot d-lt"></span>Phase 3 · Scale (6–12 mo)</th></tr></thead>
+    <tbody>
+      <tr><td>Orchestration Core</td><td>Journey workflow, event bus, state machine</td><td>Scale + resilience, managed control plane</td><td>Multi-region, workflow migration</td></tr>
+      <tr><td>Strategy &amp; Decisioning</td><td>Policy-as-code, decision audit</td><td>Champion/challenger live</td><td>Business authoring, optimization loop</td></tr>
+      <tr><td>Compliance &amp; Controls</td><td>Reg F, suppression, WORM audit</td><td>UDAAP/FCRA/state coverage</td><td>Auto reg-change mgmt, attestations</td></tr>
+      <tr><td>Governed AI Agents</td><td>Digital + quality agents, decision capture</td><td>Specialist agents, review queues</td><td>Agent eval harness, model governance</td></tr>
+      <tr><td>Risk &amp; ML</td><td>Risk model, A/B, roll-rate</td><td>MRM artifacts, drift detection</td><td>Auto-retrain, uplift modeling</td></tr>
+      <tr><td>Data &amp; Lakehouse</td><td>Medallion + lineage + marts</td><td>BI integration, reporting marts</td><td>Real-time serving, data-quality SLAs</td></tr>
+      <tr><td>Channel Integration</td><td>Adapters + normalization</td><td>Live vendor integrations</td><td>Omnichannel sequencing, IVR</td></tr>
+      <tr><td>Stakeholder UI</td><td>Persona surfaces, live data</td><td>RBAC/SSO, agent desktop</td><td>Configurable, mobile, white-label</td></tr>
+      <tr><td>Platform Operations</td><td>Heartbeats, traces, cost</td><td>OTel, SLOs, runbooks</td><td>Autoscale, DR, chargeback</td></tr>
+      <tr><td>Integration &amp; Onboarding</td><td>Adapter contracts, data load</td><td>Live core integration, CDC</td><td>MDM, payment posting</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Closing -->
+  <div class="closing">
+    <h3>Why this de-risks your build</h3>
+    <p>Most collections-platform builds spend the first two quarters proving the architecture can work at all. <strong>We start from a working reference platform</strong> — so Phase 1 is adaptation, not invention. You see a credible, compliant, demonstrable platform on your data in 12 weeks, then harden to production from a base that already does the hard parts: governed AI, compliance-as-code, lineage, and statistically rigorous risk.</p>
+    <p style="margin-top:12px"><strong>Recommended next step:</strong> a two-hour working session with your platform, risk, and compliance leads to map the variability — your portfolio, your core systems, your regulatory frame — and return a fixed-scope Phase 1 plan tailored to your environment.</p>
+  </div>
+
+  <div class="foot">
+    Short term = Phase 1 (weeks 0–12), the must-do core that makes the platform real, compliant, and demonstrable. Long term = Phases 2–3 (months 3–12), scale, automation, and enterprise breadth. <strong>MUST</strong> markers indicate non-negotiables for a credible go-live. Module list and feature claims reflect capabilities proven in the reference platform.
+  </div>
+
+</div>
+</body>
+</html>
