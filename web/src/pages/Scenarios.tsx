@@ -26,6 +26,32 @@ function eventCategory(event: LiveEvent): string {
   return event.event_category || event.category || 'unknown'
 }
 
+// The live WebSocket stream carries the raw Kafka event, which (for decision,
+// compliance, and lifecycle events) has no top-level `event_type` — only
+// fields like decision_type / check_type / from_stage→to_stage. Mirror the
+// backend event-projector so these rows get a real label instead of a blank.
+function deriveEventType(event: LiveEvent): string {
+  const e = event as Record<string, unknown>
+  if (e.event_type) return e.event_type as string
+  const topic = (event.topic as string) || ''
+  if (topic.includes('decisions')) return (e.decision_type as string) || 'strategy_evaluation'
+  if (topic.includes('compliance')) {
+    if (e.action_blocked) return `blocked:${e.action_blocked}`
+    const ct = (e.check_type as string) || ''
+    return ct ? `compliance:${ct}` : 'compliance_check'
+  }
+  if (topic.includes('lifecycle')) {
+    const from = (e.from_stage as string) || ''
+    const to = (e.to_stage as string) || ''
+    if (from && to) return `stage_change:${from}->${to}`
+    if (to) return `stage_change:${to}`
+    return 'journey_stage_change'
+  }
+  if (topic.includes('ai.reasoning')) return `ai_reasoning:${(e.agent_type as string) || 'unknown'}`
+  if (topic.includes('actions')) return (e.action_type as string) || 'action_dispatched'
+  return ''
+}
+
 function categoryIcon(cat: string): string {
   switch (cat) {
     case 'decision': return '⚡'
@@ -442,7 +468,7 @@ function ScenarioTheater({
                           </span>
                         )}
                         <span className="text-sm text-slate-700 font-medium truncate">
-                          {humanEventLabel(event.event_type || '', event.payload)}
+                          {humanEventLabel(deriveEventType(event), event.payload)}
                         </span>
                         {intent && (
                           <span className={`badge text-[10px] shrink-0 ${

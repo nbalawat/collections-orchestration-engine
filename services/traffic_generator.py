@@ -38,6 +38,7 @@ from events.models import ChannelEvent, Channel, Direction, Intent
 from events.topics import Topics
 from services.channel_simulators.simulator import ChannelSimulator, SMS_INBOUND_MESSAGES
 from services.shared.config import get_settings
+from services.shared.demo_accounts import RESERVED_SCENARIO_CUSTOMERS
 from services.shared.heartbeat import HeartbeatEmitter
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -157,6 +158,9 @@ class TrafficGenerator:
             await self.db.close()
 
     async def _load_customer_pool(self):
+        # Exclude accounts reserved for scripted demo scenarios so the traffic
+        # generator never pollutes them — they stay clean for live demos.
+        reserved = list(RESERVED_SCENARIO_CUSTOMERS)
         async with self.db.acquire() as conn:
             rows = await conn.fetch("""
                 SELECT cp.customer_id, cp.timezone, cp.preferred_channel,
@@ -164,11 +168,16 @@ class TrafficGenerator:
                 FROM customer_profiles cp
                 JOIN accounts a ON a.customer_id = cp.customer_id
                 WHERE a.status = 'ACTIVE'
+                  AND cp.customer_id <> ALL($2::text[])
                 ORDER BY RANDOM()
                 LIMIT $1
-            """, self.target_journeys * 3)
+            """, self.target_journeys * 3, reserved)
         for row in rows:
             self.active_customers.append(dict(row))
+        logger.info(
+            "Traffic generator pool: %d customers (excluded %d reserved demo accounts)",
+            len(self.active_customers), len(reserved),
+        )
 
     def _pick_customer(self) -> dict | None:
         if not self.active_customers:
