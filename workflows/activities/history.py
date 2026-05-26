@@ -13,10 +13,10 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import asyncpg
 from temporalio import activity
 
+from services.shared.config import get_settings
 from workflows.types import ContactStats
 
 logger = logging.getLogger(__name__)
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
 
 
 @activity.defn
@@ -26,7 +26,7 @@ async def compute_contact_stats(customer_id: str) -> ContactStats:
     Drives OPA inputs that govern: time-of-day calling restrictions, Reg F call
     frequency caps, channel exhaustion routing, and conflicting-signal escalation.
     """
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
     try:
         # Customer's local hour from their stored timezone.
         tz_row = await conn.fetchrow(

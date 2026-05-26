@@ -25,8 +25,13 @@ from datetime import datetime, timezone
 import asyncpg
 import numpy as np
 
+from services.shared.config import get_settings
+
 logger = logging.getLogger(__name__)
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
+
+
+def _db_dsn() -> str:
+    return get_settings().postgres_dsn_sync
 
 CANONICAL_STAGES = [
     "CURRENT", "PRE_DELINQUENT", "DUNNING", "PTP_ACTIVE", "PTP_BROKEN",
@@ -41,7 +46,7 @@ async def build_transition_matrix() -> tuple[np.ndarray, list[str], dict]:
 
     Returns (matrix, stage_labels, metadata).
     """
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(_db_dsn())
     try:
         rows = await conn.fetch("""
             SELECT
@@ -110,7 +115,7 @@ async def current_state() -> dict[str, int]:
     from the account-side labels (EARLY/MID/LATE/SEVERE/CURRENT) to the
     journey-side labels (DUNNING/etc).
     """
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(_db_dsn())
     try:
         # Latest journey stage per customer (from lifecycle events)
         latest = await conn.fetch("""

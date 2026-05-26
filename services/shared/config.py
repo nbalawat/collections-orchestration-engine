@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost:8000",
+    ]
 
     # Lakehouse (real AWS S3)
     lakehouse_s3_region: str = "us-east-1"

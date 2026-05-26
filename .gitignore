@@ -24,3 +24,8 @@ data/seed/*.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Deploy secrets (NEVER commit)
+.deploy-state
+ec2-key.pem
+*.pem

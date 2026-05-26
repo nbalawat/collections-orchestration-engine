@@ -8,9 +8,10 @@ from pathlib import Path
 
 import asyncpg
 
+from services.shared.config import get_settings
+
 
 SEED_DIR = Path("data/seed")
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
 
 
 def _date(val: str | None) -> date | None:
@@ -32,7 +33,7 @@ def _decimal(val) -> float | None:
 
 
 async def seed():
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
 
     try:
         # Clear existing data (order matters for FK constraints)

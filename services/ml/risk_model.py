@@ -39,9 +39,9 @@ from services.ml.features import (
     feature_names,
     feature_vector,
 )
+from services.shared.config import get_settings
 
 logger = logging.getLogger(__name__)
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
 
 # Stage worsening rank — higher = worse outcome
 STAGE_RANK: dict[str, int] = {
@@ -143,7 +143,7 @@ async def collect_training_snapshots(
     max_snapshots: int = 1500,
 ) -> tuple[list[list[float]], list[int], list[str]]:
     """Walk lifecycle events to assemble (features, label) rows for training."""
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
     try:
         # Take any stage_change event old enough to have a meaningful forward
         # window (>=15 min for the POC; in production we'd require >= LOOKAHEAD_DAYS).

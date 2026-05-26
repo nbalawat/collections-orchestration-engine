@@ -14,6 +14,7 @@ from temporalio.service import RPCError
 import time
 
 from events.topics import Topics
+from services.shared.config import get_settings
 from services.shared.heartbeat import HeartbeatEmitter
 from services.shared.kafka_client import KafkaConsumer
 from workflows.customer_journey import CustomerJourney
@@ -30,7 +31,7 @@ class SignalBridge:
         self.heartbeat = HeartbeatEmitter("signal-bridge")
 
     async def start(self):
-        self.temporal = await Client.connect("localhost:7233")
+        self.temporal = await Client.connect(get_settings().temporal_host)
         logger.info("Connected to Temporal")
         await self.heartbeat.start()
 

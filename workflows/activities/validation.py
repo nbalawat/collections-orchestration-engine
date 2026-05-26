@@ -19,10 +19,9 @@ from temporalio import activity
 
 from events.models import ChannelEvent, Channel, Direction
 from events.topics import Topics
+from services.shared.config import get_settings
 
 logger = logging.getLogger(__name__)
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
-KAFKA_BOOTSTRAP = "localhost:9094"
 VALIDATION_WINDOW_DAYS = 5
 
 
@@ -39,7 +38,7 @@ async def ensure_validation_notice_scheduled(
     first_contact_at = datetime.fromisoformat(first_contact_at_iso.replace("Z", "+00:00"))
     due_at = first_contact_at + timedelta(days=VALIDATION_WINDOW_DAYS)
 
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
     try:
         existing = await conn.fetchrow("""
             SELECT notice_id, status, notice_due_at FROM validation_notices
@@ -108,7 +107,7 @@ async def dispatch_validation_notice(
         source_service="orchestrator-compliance",
     )
 
-    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP)
+    producer = AIOKafkaProducer(bootstrap_servers=get_settings().kafka_bootstrap_servers)
     await producer.start()
     try:
         await producer.send_and_wait(
@@ -119,7 +118,7 @@ async def dispatch_validation_notice(
     finally:
         await producer.stop()
 
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
     try:
         await conn.execute("""
             UPDATE validation_notices

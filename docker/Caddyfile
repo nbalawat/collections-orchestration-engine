@@ -1,0 +1,42 @@
+# SITE_ADDRESS controls TLS behavior:
+#   ":80"                                  → HTTP only, no TLS (local dev)
+#   "collections.aifirstapplication.com"   → Caddy auto-issues Let's Encrypt
+#
+# BASIC_AUTH_HASH (optional): if set, all routes require basic auth.
+#   Generate with:  docker run --rm caddy:2.8-alpine caddy hash-password --plaintext 'your-password'
+
+{
+    email {$ACME_EMAIL:naveen.balawat@gmail.com}
+}
+
+{$SITE_ADDRESS::80} {
+    encode gzip zstd
+
+    # Optional basic auth wrap — enabled only if BASIC_AUTH_HASH is set in the env.
+    @needs_auth `{env.BASIC_AUTH_HASH} != ""`
+    handle @needs_auth {
+        basicauth {
+            {$BASIC_AUTH_USER:demo} {$BASIC_AUTH_HASH}
+        }
+    }
+
+    # Reverse-proxy backend routes.
+    @api {
+        path /api/* /ws/* /docs* /openapi.json /redoc*
+    }
+    handle @api {
+        reverse_proxy api:8000
+    }
+
+    # Frontend SPA — serve static files with HTML5 history fallback.
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

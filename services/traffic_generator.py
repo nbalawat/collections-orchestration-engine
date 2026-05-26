@@ -37,12 +37,12 @@ import asyncpg
 from events.models import ChannelEvent, Channel, Direction, Intent
 from events.topics import Topics
 from services.channel_simulators.simulator import ChannelSimulator, SMS_INBOUND_MESSAGES
+from services.shared.config import get_settings
 from services.shared.heartbeat import HeartbeatEmitter
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-DB_DSN = os.environ.get("POSTGRES_DSN", "postgresql://collections:collections@localhost:5432/collections")
 TARGET_LIVE_JOURNEYS = int(os.environ.get("TARGET_LIVE_JOURNEYS", "60"))
 EVENTS_PER_MINUTE = int(os.environ.get("EVENTS_PER_MINUTE", "30"))
 
@@ -140,7 +140,7 @@ class TrafficGenerator:
         })
 
     async def start(self):
-        self.db = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=5)
+        self.db = await asyncpg.create_pool(get_settings().postgres_dsn_sync, min_size=2, max_size=5)
         await self.simulator.start()
         await self._load_customer_pool()
         await self.heartbeat.start()

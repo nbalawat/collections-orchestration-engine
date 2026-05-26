@@ -16,7 +16,11 @@ from typing import Any
 
 import asyncpg
 
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
+from services.shared.config import get_settings
+
+
+def _db_dsn() -> str:
+    return get_settings().postgres_dsn_sync
 
 # Feature catalog — used both for extraction and for the UI to show what's available
 FEATURE_CATALOG: list[dict[str, str]] = [
@@ -51,7 +55,7 @@ FEATURE_CATALOG: list[dict[str, str]] = [
 async def get_features(customer_id: str, *, as_of: datetime | None = None) -> dict[str, Any]:
     """Extract feature vector for one customer. `as_of` defaults to now."""
     as_of = as_of or datetime.now(timezone.utc)
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(_db_dsn())
     try:
         return await _features_for_conn(conn, customer_id, as_of)
     finally:
@@ -61,7 +65,7 @@ async def get_features(customer_id: str, *, as_of: datetime | None = None) -> di
 async def get_features_batch(customer_ids: list[str], *, as_of: datetime | None = None) -> list[dict[str, Any]]:
     """Extract feature vectors for many customers. Uses a single connection."""
     as_of = as_of or datetime.now(timezone.utc)
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(_db_dsn())
     try:
         return [await _features_for_conn(conn, cid, as_of) for cid in customer_ids]
     finally:
@@ -70,7 +74,7 @@ async def get_features_batch(customer_ids: list[str], *, as_of: datetime | None 
 
 async def list_known_customers(limit: int | None = None) -> list[str]:
     """All customers with at least one account — i.e. anyone we could score."""
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(_db_dsn())
     try:
         rows = await conn.fetch(
             "SELECT DISTINCT customer_id FROM accounts WHERE status = 'ACTIVE'"

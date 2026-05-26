@@ -8,11 +8,18 @@ import asyncpg
 import httpx
 from temporalio import activity
 
+from services.shared.config import get_settings
 from workflows.types import AccountInfo, ContactStats, StrategyDecision
 
 logger = logging.getLogger(__name__)
-OPA_URL = "http://localhost:8181"
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
+
+
+def _opa_url() -> str:
+    return get_settings().opa_url
+
+
+def _db_dsn() -> str:
+    return get_settings().postgres_dsn_sync
 
 
 async def _resolve_strategy_version(customer_id: str) -> str:
@@ -23,7 +30,7 @@ async def _resolve_strategy_version(customer_id: str) -> str:
     import random as _random
 
     try:
-        conn = await asyncpg.connect(DB_DSN)
+        conn = await asyncpg.connect(_db_dsn())
     except Exception:
         return "v1.0.0"
 
@@ -91,33 +98,34 @@ async def evaluate_strategy(account_info: AccountInfo, stats: ContactStats | Non
         "preferred_channel": account_info.preferred_channel,
     }
 
+    opa_url = _opa_url()
     async with httpx.AsyncClient() as client:
         seg_resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/segmentation/segment",
+            f"{opa_url}/v1/data/collections/segmentation/segment",
             json={"input": opa_input},
         )
         segment = seg_resp.json().get("result", {})
 
         treat_resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/treatment/treatment",
+            f"{opa_url}/v1/data/collections/treatment/treatment",
             json={"input": opa_input},
         )
         treatment = treat_resp.json().get("result", {})
 
         route_resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/channel_routing/routing",
+            f"{opa_url}/v1/data/collections/channel_routing/routing",
             json={"input": opa_input},
         )
         routing = route_resp.json().get("result", {})
 
         comp_resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/compliance/check",
+            f"{opa_url}/v1/data/collections/compliance/check",
             json={"input": opa_input},
         )
         compliance = comp_resp.json().get("result", {})
 
         ai_review_resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/treatment/requires_ai_review",
+            f"{opa_url}/v1/data/collections/treatment/requires_ai_review",
             json={"input": opa_input},
         )
         requires_ai = ai_review_resp.json().get("result", False)
@@ -129,7 +137,7 @@ async def evaluate_strategy(account_info: AccountInfo, stats: ContactStats | Non
 
     # Persist the decision rationale — input + outputs — for full audit trail.
     try:
-        conn = await asyncpg.connect(DB_DSN)
+        conn = await asyncpg.connect(_db_dsn())
         try:
             import uuid as _uuid
             await conn.execute("""

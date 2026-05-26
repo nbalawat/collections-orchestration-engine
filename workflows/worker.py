@@ -13,6 +13,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 from temporalio.client import Client
 from temporalio.worker import Worker
 
+from services.shared.config import get_settings
 from workflows.customer_journey import CustomerJourney
 from workflows.activities.account import lookup_account
 from workflows.activities.history import compute_contact_stats
@@ -31,13 +32,13 @@ from workflows.activities.dispatch import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-TEMPORAL_HOST = "localhost:7233"
 TASK_QUEUE = "collections"
 
 
 async def main():
-    client = await Client.connect(TEMPORAL_HOST)
-    logger.info("Connected to Temporal at %s", TEMPORAL_HOST)
+    temporal_host = get_settings().temporal_host
+    client = await Client.connect(temporal_host)
+    logger.info("Connected to Temporal at %s", temporal_host)
 
     worker = Worker(
         client,

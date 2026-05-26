@@ -15,8 +15,9 @@ from collections import deque
 
 import asyncpg
 
+from services.shared.config import get_settings
+
 logger = logging.getLogger(__name__)
-DB_DSN = os.environ.get("POSTGRES_DSN", "postgresql://collections:collections@localhost:5432/collections")
 HEARTBEAT_INTERVAL_S = float(os.environ.get("HEARTBEAT_INTERVAL_S", "5"))
 
 
@@ -86,7 +87,7 @@ class HeartbeatEmitter:
         p99 = _percentile(list(self._latencies), 99) if self._latencies else None
 
         try:
-            conn = await asyncpg.connect(DB_DSN)
+            conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
             try:
                 await conn.execute("""
                     INSERT INTO service_heartbeats (service_name, instance_id, status,

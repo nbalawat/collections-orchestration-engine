@@ -7,15 +7,15 @@ from datetime import date
 import asyncpg
 from temporalio import activity
 
+from services.shared.config import get_settings
 from workflows.types import AccountInfo
 
 logger = logging.getLogger(__name__)
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
 
 
 @activity.defn
 async def lookup_account(customer_id: str) -> AccountInfo:
-    conn = await asyncpg.connect(DB_DSN)
+    conn = await asyncpg.connect(get_settings().postgres_dsn_sync)
     try:
         row = await conn.fetchrow("""
             SELECT a.*, cp.risk_score, cp.behavioral_score, cp.relationship_value,

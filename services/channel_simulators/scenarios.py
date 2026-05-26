@@ -8,6 +8,7 @@ from temporalio.client import Client
 
 from events.models import Direction, Intent
 from services.channel_simulators.simulator import ChannelSimulator
+from services.shared.config import get_settings
 from workflows.customer_journey import CustomerJourney
 from workflows.types import ComplianceFlagSignal, PaymentSignal
 
@@ -22,7 +23,7 @@ class ScenarioRunner:
 
     async def start(self):
         await self.sim.start()
-        self.temporal = await Client.connect("localhost:7233")
+        self.temporal = await Client.connect(get_settings().temporal_host)
         logger.info("Scenario runner ready")
 
     async def stop(self):

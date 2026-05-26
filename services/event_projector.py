@@ -17,14 +17,12 @@ import orjson
 import redis.asyncio as aioredis
 
 from events.topics import Topics
+from services.shared.config import get_settings
 from services.shared.heartbeat import HeartbeatEmitter
 from services.shared.kafka_client import KafkaConsumer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
-
-DB_DSN = "postgresql://collections:collections@localhost:5432/collections"
-REDIS_URL = "redis://localhost:6379/0"
 
 
 class EventProjector:
@@ -36,8 +34,9 @@ class EventProjector:
         self.heartbeat = HeartbeatEmitter("event-projector")
 
     async def start(self):
-        self.db = await asyncpg.connect(DB_DSN)
-        self.redis = aioredis.from_url(REDIS_URL, decode_responses=False)
+        settings = get_settings()
+        self.db = await asyncpg.connect(settings.postgres_dsn_sync)
+        self.redis = aioredis.from_url(settings.redis_url, decode_responses=False)
         logger.info("Connected to Postgres and Redis")
         await self.heartbeat.start()
 

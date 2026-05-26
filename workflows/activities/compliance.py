@@ -6,10 +6,10 @@ import logging
 import httpx
 from temporalio import activity
 
+from services.shared.config import get_settings
 from workflows.types import ActionToDispatch
 
 logger = logging.getLogger(__name__)
-OPA_URL = "http://localhost:8181"
 
 
 @activity.defn
@@ -35,7 +35,7 @@ async def check_compliance(
 
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f"{OPA_URL}/v1/data/collections/compliance/action_gate",
+            f"{get_settings().opa_url}/v1/data/collections/compliance/action_gate",
             json={"input": {**opa_input, "action": action_input}},
         )
         result = resp.json().get("result", {"allowed": False, "reason": "no OPA response"})

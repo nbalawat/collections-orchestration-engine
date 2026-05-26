@@ -18,38 +18,41 @@ Real-time collections orchestration engine with AI agents. Local Docker Compose 
 - Python: `uv` (pyproject.toml at repo root)
 - Node: `pnpm` (web/ directory)
 
-## Running Locally
+## Running Locally — one command
 ```bash
-# 1. Infrastructure
-docker compose up -d
-
-# 2. Seed database (first time only)
-uv run python -m data.generators.customer_generator
-uv run python -m data.generators.seed_database
-
-# 3. All backend services (one command)
-uv run python -m scripts.run_services
-
-# 4. Frontend
-cd web && pnpm dev
-
-# 5. Demo scenarios
-uv run python -m scripts.demo all              # run all scenarios
-uv run python -m scripts.demo cross_channel    # single scenario
-uv run python -m scripts.demo ai_agents        # exercise all 5 AI agents
-
-# 6. Event replay
-uv run python -m scripts.replay --customer CUST-0032 --list
-uv run python -m scripts.replay --customer CUST-0032 --speed 2
-uv run python -m scripts.replay --category interaction --dry-run
+make up            # build images + start everything + seed DB
+make down          # stop all (keeps data)
+make clean         # stop + wipe all volumes (fresh start)
+make logs          # tail logs (all services)
+make logs SVC=api  # tail one service
+make ps            # show running services
+make psql          # open psql in postgres container
+make seed          # re-seed the database
+make help          # list all targets
 ```
 
-## URLs
-- **API**: http://localhost:8000
+`make up` brings up the entire stack — infra (Postgres / Redis / Kafka / Temporal / OPA), all 8 backend services, the traffic generator, and Caddy serving the frontend at http://localhost. First-time build takes ~5 min; subsequent runs ~30s.
+
+A `traffic_generator` service runs continuously and pushes realistic events through the platform, so the UI populates on its own — no manual `scripts/demo` step needed. (The scripts are still there if you want curated scenarios.)
+
+## URLs (local)
+- **Frontend**: http://localhost (served by Caddy, proxies /api → backend)
+- **API direct**: http://localhost:8000 (handy for /docs)
 - **API Docs**: http://localhost:8000/docs
-- **Frontend**: http://localhost:5173
 - **Temporal UI**: http://localhost:8233
 - **OPA**: http://localhost:8181
+
+## Deploy to AWS
+```bash
+make deploy           # provision EC2 + push code + bring up (~10 min first time)
+make deploy-logs      # tail logs on EC2
+make deploy-ssh       # SSH into EC2
+make destroy          # tear down (confirms first)
+```
+
+Provisions a single t3.xlarge in us-east-1, security group restricts SSH to your current IP, opens 80/443 to the world. Caddy serves the site at `https://collections.aifirstapplication.com` with a real Let's Encrypt cert and basic auth (default password: `collections-demo-2026`, override with `DEPLOY_BASIC_AUTH_PASSWORD=...`). Cost ~$130/mo (compute + 50GB EBS) plus Anthropic usage.
+
+State is tracked in `.deploy-state` (gitignored). Domain hosted zone: `Z05446501WDE1E8N4CZ0K`.
 
 ## Project Structure
 - `events/` — Pydantic event models (canonical contract for all services)

@@ -1,4 +1,41 @@
+# Single compose file runs the entire platform — infra + backend + web.
+# `make up` brings the whole thing online. `make down` tears it down.
+#
+# Local dev: `make up` (uses .env from repo root)
+# Production: `make up COMPOSE_PROFILES=prod` (Caddy with TLS + basic auth)
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: docker/backend.Dockerfile
+  image: collections-backend:latest
+  env_file:
+    - .env
+  environment:
+    COLLECTIONS_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    COLLECTIONS_POSTGRES_HOST: postgres
+    COLLECTIONS_POSTGRES_PORT: "5432"
+    COLLECTIONS_POSTGRES_USER: collections
+    COLLECTIONS_POSTGRES_PASSWORD: collections
+    COLLECTIONS_POSTGRES_DB: collections
+    COLLECTIONS_REDIS_URL: redis://redis:6379/0
+    COLLECTIONS_TEMPORAL_HOST: temporal:7233
+    COLLECTIONS_OPA_URL: http://opa:8181
+    COLLECTIONS_CORS_ORIGINS: '["*"]'
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    kafka:
+      condition: service_healthy
+    opa:
+      condition: service_started
+  restart: unless-stopped
+
 services:
+  # ─── Infrastructure ────────────────────────────────────────────────
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -18,7 +55,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
 
   redis:
     image: redis:7-alpine
@@ -62,7 +99,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 1G
 
   temporal:
     image: temporalio/auto-setup:1.25.2
@@ -83,15 +120,15 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
 
   temporal-ui:
     image: temporalio/ui:2.31.2
     ports:
-      - "8080:8080"
+      - "8233:8080"
     environment:
       TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      TEMPORAL_CORS_ORIGINS: http://localhost,http://localhost:5173,http://localhost:3000
     depends_on:
       - temporal
     deploy:
@@ -116,8 +153,106 @@ services:
         limits:
           memory: 64M
 
-  # Lakehouse storage is real AWS S3 — see .env for bucket names + region.
-  # No local object-store service is needed.
+  # ─── One-shot seed ────────────────────────────────────────────────
+  # Runs on every `up`; the seed script TRUNCATEs first so re-runs are safe
+  # and idempotent. Profile=seed lets you skip it after first boot if desired.
+
+  seed:
+    <<: *backend
+    profiles: ["seed", "default"]
+    command: >
+      sh -c "python -m data.generators.customer_generator
+             && python -m data.generators.seed_database"
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ─── Backend services ──────────────────────────────────────────────
+
+  api:
+    <<: *backend
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "workflows.worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      opa:
+        condition: service_started
+
+  signal-bridge:
+    <<: *backend
+    command: ["python", "-m", "services.signal_bridge"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+
+  event-projector:
+    <<: *backend
+    command: ["python", "-m", "services.event_projector"]
+
+  traffic-generator:
+    <<: *backend
+    command: ["python", "-m", "services.traffic_generator"]
+    depends_on:
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_started
+
+  lake-sink:
+    <<: *backend
+    command: ["python", "-m", "services.lake_sink"]
+
+  silver-compactor:
+    <<: *backend
+    command: ["python", "-m", "services.lakehouse_compactor"]
+
+  gold-builder:
+    <<: *backend
+    command: ["python", "-m", "services.lakehouse_gold"]
+
+  # ─── Web (Caddy + frontend) ────────────────────────────────────────
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: collections-web:latest
+    ports:
+      - "${WEB_HTTP_PORT:-80}:80"
+      - "${WEB_HTTPS_PORT:-443}:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:-demo}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:-}
+      ACME_EMAIL: ${ACME_EMAIL:-naveen.balawat@gmail.com}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:

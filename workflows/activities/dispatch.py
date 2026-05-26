@@ -11,14 +11,14 @@ from temporalio import activity
 
 from events.models import ActionEvent, DecisionEvent, LifecycleEvent, ComplianceEvent, AIReasoningTraceEvent
 from events.topics import Topics
+from services.shared.config import get_settings
 from workflows.types import ActionToDispatch, StrategyDecision, JourneyState, AIAgentResult
 
 logger = logging.getLogger(__name__)
-KAFKA_BOOTSTRAP = "localhost:9094"
 
 
 async def _publish(topic: str, event):
-    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP)
+    producer = AIOKafkaProducer(bootstrap_servers=get_settings().kafka_bootstrap_servers)
     await producer.start()
     try:
         key = getattr(event, "customer_id", None)
@@ -74,7 +74,7 @@ async def publish_decision(decision: StrategyDecision, customer_id: str, workflo
     raw = event.model_dump(mode="json")
     raw["rationale"] = rationale_payload
     import orjson as _orjson
-    producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BOOTSTRAP)
+    producer = AIOKafkaProducer(bootstrap_servers=get_settings().kafka_bootstrap_servers)
     await producer.start()
     try:
         key_bytes = customer_id.encode() if customer_id else None
