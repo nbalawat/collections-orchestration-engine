@@ -5,6 +5,8 @@ import asyncio
 import logging
 
 from temporalio.client import Client
+from temporalio.common import WorkflowIDReusePolicy
+from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from events.models import Direction, Intent
 from services.channel_simulators.simulator import ChannelSimulator
@@ -30,18 +32,40 @@ class ScenarioRunner:
         await self.sim.stop()
 
     async def _ensure_workflow(self, customer_id: str) -> str:
+        """Reset the customer's journey workflow to a clean slate, then return its id.
+
+        Scenarios are scripted demos: we want each run to show *exactly* the
+        scripted journey, not a mix polluted by background traffic, and we never
+        want to inherit a workflow stuck in a failed-task state (e.g. left over
+        from an older code version). So we terminate any existing workflow for
+        this customer and start a fresh one with the current code.
+
+        This makes scenarios reproducible on any machine and resilient to the
+        traffic generator racing for the same customer.
+        """
         workflow_id = f"journey-{customer_id}"
+        handle = self.temporal.get_workflow_handle(workflow_id)
+
+        # Terminate any existing run so the scripted journey starts clean.
         try:
-            handle = self.temporal.get_workflow_handle(workflow_id)
-            await handle.query(CustomerJourney.snapshot)
+            await handle.terminate(reason="scenario reset — clean demo slate")
+            await asyncio.sleep(1)
         except Exception:
+            pass  # nothing to terminate (no prior run) — fine
+
+        # Start fresh. Tolerate a race where another starter (traffic generator)
+        # re-created the workflow in the gap after our terminate.
+        try:
             await self.temporal.start_workflow(
                 CustomerJourney.run,
                 customer_id,
                 id=workflow_id,
                 task_queue="collections",
+                id_reuse_policy=WorkflowIDReusePolicy.TERMINATE_IF_RUNNING,
             )
             await asyncio.sleep(2)
+        except WorkflowAlreadyStartedError:
+            logger.info("Workflow %s already running, reusing", workflow_id)
         return workflow_id
 
     async def _query(self, customer_id: str) -> dict:
