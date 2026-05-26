@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Collections Engine — Visual Page Catalog</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --ink:#0f172a; --ink2:#334155; --muted:#64748b; --line:#e2e8f0;
+    --bg:#fff; --soft:#f8fafc;
+    --emerald:#10b981; --emerald-bg:#ecfdf5; --emerald-ln:#a7f3d0;
+    --violet:#8b5cf6; --violet-bg:#f5f3ff; --violet-ln:#ddd6fe;
+    --indigo:#6366f1; --indigo-bg:#eef2ff; --indigo-ln:#c7d2fe;
+    --amber:#f59e0b; --amber-bg:#fffbeb; --amber-ln:#fde68a;
+    --rose:#f43f5e;  --rose-bg:#fff1f2;  --rose-ln:#fecdd3;
+    --sky:#0ea5e9;   --sky-bg:#f0f9ff;   --sky-ln:#bae6fd;
+    --slate:#475569; --slate-bg:#f1f5f9; --slate-ln:#cbd5e1;
+  }
+  * { box-sizing: border-box; }
+  html,body { margin:0; background:var(--bg); color:var(--ink); }
+  body { font:14px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  .page { max-width:1180px; margin:0 auto; padding:44px 52px 100px; }
+
+  /* Hero */
+  .hero { border-bottom:4px solid var(--ink); padding-bottom:24px; margin-bottom:14px; }
+  .hero .kicker { font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.14em; color:var(--indigo); text-transform:uppercase; margin-bottom:10px;}
+  .hero h1 { font:700 34px/1.15 Georgia,"Iowan Old Style",serif; margin:0 0 6px;}
+  .hero .sub { color:var(--ink2); font-size:16px; max-width:760px;}
+
+  /* Legend */
+  .legend { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 8px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; font:600 11px/1 ui-monospace,monospace; letter-spacing:.04em; padding:5px 10px; border-radius:20px; border:1px solid var(--line);}
+  .chip .dot { width:10px; height:10px; border-radius:50%; }
+
+  /* Nav map */
+  .navmap { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:18px 0 8px; }
+  .navmap a { text-decoration:none; }
+  .navmap .nv { border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:var(--soft); transition:.12s; }
+  .navmap .nv:hover { border-color:var(--indigo); background:#fff; }
+  .navmap .nv .n { font:700 10px/1 ui-monospace,monospace; color:var(--muted); }
+  .navmap .nv .t { font-weight:700; color:var(--ink); margin-top:4px; font-size:13px; }
+  .navmap .nv .r { font:11px/1.2 ui-monospace,monospace; color:var(--muted); margin-top:3px; }
+
+  h2.section { font:700 13px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:40px 0 14px; }
+
+  /* Page block */
+  .pg { border:1px solid var(--line); border-radius:12px; margin:22px 0; overflow:hidden; page-break-inside:avoid; }
+  .pg-head { padding:14px 22px; color:#fff; display:flex; align-items:baseline; gap:14px; }
+  .pg-head .num { font:700 11px/1 ui-monospace,monospace; letter-spacing:.12em; opacity:.7; }
+  .pg-head .ttl { font:700 19px/1.2 Georgia,serif; flex:1; }
+  .pg-head .route { font:600 12px/1 ui-monospace,monospace; background:rgba(255,255,255,.16); padding:5px 9px; border-radius:5px; }
+  .pg-body { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:0; }
+  .mock { padding:18px 20px; background:var(--soft); border-right:1px solid var(--line); }
+  .desc { padding:18px 22px; }
+
+  /* domain header colors */
+  .h-emerald{background:var(--emerald);} .h-violet{background:var(--violet);}
+  .h-indigo{background:var(--indigo);}  .h-amber{background:var(--amber);}
+  .h-rose{background:var(--rose);}       .h-sky{background:var(--sky);}
+  .h-slate{background:var(--slate);}     .h-ink{background:var(--ink);}
+
+  /* Wireframe primitives */
+  .wf { font:600 10px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .box { border:1.5px solid var(--slate-ln); border-radius:6px; background:#fff; padding:7px 8px; color:var(--ink2); }
+  .box .lbl { font-weight:700; color:var(--ink); display:block; font-size:10px; }
+  .box .meta { color:var(--muted); font-size:9px; font-weight:600; margin-top:2px; }
+  .row { display:flex; gap:6px; margin-bottom:6px; }
+  .row > * { flex:1; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px; }
+  .grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:6px; }
+  .grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+  .grid5 { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; margin-bottom:6px; }
+  .grid6 { display:grid; grid-template-columns:repeat(6,1fr); gap:5px; margin-bottom:6px; }
+  .tall { min-height:90px; }
+  .xtall { min-height:150px; }
+  .feed { background:repeating-linear-gradient(0deg,#fff,#fff 13px,#f8fafc 13px,#f8fafc 26px); }
+  .pulse { text-align:center; padding:8px 4px; }
+  .pulse .big { font-size:15px; font-weight:800; color:var(--ink); display:block; }
+  .tag { display:inline-block; font-size:8px; font-weight:700; padding:1px 5px; border-radius:8px; }
+  .split { display:grid; gap:6px; }
+
+  /* tint helpers for boxes */
+  .b-em{background:var(--emerald-bg); border-color:var(--emerald-ln);}
+  .b-vi{background:var(--violet-bg); border-color:var(--violet-ln);}
+  .b-in{background:var(--indigo-bg); border-color:var(--indigo-ln);}
+  .b-am{background:var(--amber-bg); border-color:var(--amber-ln);}
+  .b-ro{background:var(--rose-bg); border-color:var(--rose-ln);}
+  .b-sk{background:var(--sky-bg); border-color:var(--sky-ln);}
+  .b-sl{background:var(--slate-bg); border-color:var(--slate-ln);}
+
+  .arrow { text-align:center; color:var(--muted); font-weight:700; align-self:center; flex:0 0 16px; }
+
+  /* desc content */
+  .desc .purpose { font-size:14px; color:var(--ink); margin:0 0 12px; }
+  .desc h4 { font:700 10px/1 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:14px 0 6px; }
+  .desc ul { margin:4px 0; padding-left:18px; }
+  .desc li { color:var(--ink2); margin-bottom:3px; font-size:13px; }
+  .desc code { font:12px/1 ui-monospace,monospace; background:#f1f5f9; padding:1px 5px; border-radius:4px; border:1px solid #e2e8f0;}
+  .who { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px; }
+  .who .c { font:700 10px/1 ui-monospace,monospace; padding:4px 8px; border-radius:5px; letter-spacing:.04em; }
+  .c-cto{background:var(--sky-bg); color:#0369a1; border:1px solid var(--sky-ln);}
+  .c-cro{background:var(--violet-bg); color:#6d28d9; border:1px solid var(--violet-ln);}
+  .c-cco{background:var(--emerald-bg); color:#047857; border:1px solid var(--emerald-ln);}
+  .c-coo{background:var(--amber-bg); color:#b45309; border:1px solid var(--amber-ln);}
+  .c-eng{background:var(--slate-bg); color:#334155; border:1px solid var(--slate-ln);}
+
+  .poll { display:inline-block; font:600 10px/1 ui-monospace,monospace; color:var(--emerald); background:var(--emerald-bg); border:1px solid var(--emerald-ln); padding:3px 7px; border-radius:5px; margin-top:2px;}
+
+  @media print {
+    .page{padding:18px; max-width:none;}
+    .pg{page-break-inside:avoid;}
+    .navmap{grid-template-columns:repeat(5,1fr);}
+    a{color:inherit;}
+  }
+  @media (max-width:880px){
+    .pg-body{grid-template-columns:1fr;}
+    .mock{border-right:none;border-bottom:1px solid var(--line);}
+    .navmap{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="hero">
+    <div class="kicker">Visual Page Catalog · Frontend</div>
+    <h1>Collections Engine — What's on each screen</h1>
+    <p class="sub">Eleven live surfaces, each built for a specific person to answer their first ten questions without scrolling. Every wireframe below mirrors the real layout; the colored chips tell you which stakeholder each screen is built for.</p>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <span class="chip"><span class="dot" style="background:var(--emerald)"></span> Live / operational</span>
+    <span class="chip"><span class="dot" style="background:var(--violet)"></span> AI</span>
+    <span class="chip"><span class="dot" style="background:var(--indigo)"></span> Risk / strategy</span>
+    <span class="chip"><span class="dot" style="background:var(--amber)"></span> Treatment / decision</span>
+    <span class="chip"><span class="dot" style="background:var(--rose)"></span> Compliance / alert</span>
+    <span class="chip"><span class="dot" style="background:var(--sky)"></span> Platform / data</span>
+  </div>
+  <div class="legend">
+    <span class="chip"><span class="c c-cto" style="border:0;padding:2px 6px">CTO</span> tech credibility</span>
+    <span class="chip"><span class="c c-cro" style="border:0;padding:2px 6px">CRO</span> risk &amp; models</span>
+    <span class="chip"><span class="c c-cco" style="border:0;padding:2px 6px">CCO</span> compliance</span>
+    <span class="chip"><span class="c c-coo" style="border:0;padding:2px 6px">COO</span> operations</span>
+  </div>
+
+  <!-- Nav map -->
+  <h2 class="section">The left-hand navigation · 10 entries</h2>
+  <div class="navmap">
+    <a href="#p1"><div class="nv"><div class="n">01</div><div class="t">Operations Floor</div><div class="r">/</div></div></a>
+    <a href="#p2"><div class="nv"><div class="n">02</div><div class="t">Command Center</div><div class="r">/command</div></div></a>
+    <a href="#p3"><div class="nv"><div class="n">03</div><div class="t">Customer Search</div><div class="r">/customers</div></div></a>
+    <a href="#p4"><div class="nv"><div class="n">04</div><div class="t">Agent Desktop</div><div class="r">/agent</div></div></a>
+    <a href="#p5"><div class="nv"><div class="n">05</div><div class="t">AI Explorer</div><div class="r">/ai</div></div></a>
+    <a href="#p6"><div class="nv"><div class="n">06</div><div class="t">Strategy Console</div><div class="r">/strategy</div></div></a>
+    <a href="#p7"><div class="nv"><div class="n">07</div><div class="t">Platform Ops</div><div class="r">/platform</div></div></a>
+    <a href="#p8"><div class="nv"><div class="n">08</div><div class="t">Data Lakehouse</div><div class="r">/lakehouse</div></div></a>
+    <a href="#p9"><div class="nv"><div class="n">09</div><div class="t">Risk &amp; ML</div><div class="r">/risk-ml</div></div></a>
+    <a href="#p10"><div class="nv"><div class="n">10</div><div class="t">Scenarios</div><div class="r">/scenarios</div></div></a>
+  </div>
+  <p style="color:var(--muted);font-size:12px;margin-top:8px;">Plus two deep-link surfaces reached by clicking a customer: <strong>Customer Story</strong> (<code>/customer/:id</code>) and <strong>Customer Journey</strong> (<code>/customer/:id/timeline</code>), documented at the end.</p>
+
+  <h2 class="section">The screens</h2>
+
+  <!-- ───── 1 · Operations Floor ───── -->
+  <div class="pg" id="p1">
+    <div class="pg-head h-emerald"><span class="num">01</span><span class="ttl">Operations Floor</span><span class="route">/</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="grid6">
+          <div class="box b-em pulse"><span class="big">187</span>journeys</div>
+          <div class="box b-em pulse"><span class="big">42</span>evt/min</div>
+          <div class="box b-vi pulse"><span class="big">31</span>AI 5m</div>
+          <div class="box b-am pulse"><span class="big">6</span>esc.</div>
+          <div class="box b-ro pulse"><span class="big">9</span>blocks</div>
+          <div class="box b-sl pulse"><span class="big">54</span>moves</div>
+        </div>
+        <div class="grid4">
+          <div class="box"><span class="lbl">Cure 30d</span><span class="meta">▦ KPI</span></div>
+          <div class="box"><span class="lbl">Recovery</span><span class="meta">$ 30d</span></div>
+          <div class="box"><span class="lbl">Enforce%</span><span class="meta">24h</span></div>
+          <div class="box"><span class="lbl">PTP out</span><span class="meta">30d</span></div>
+        </div>
+        <div class="box b-in" style="margin-bottom:6px"><span class="lbl">⤢ Strategy A/B — Champion vs Challenger</span><span class="meta">version · customers · actions · cure% · confidence</span></div>
+        <div class="grid6">
+          <div class="box b-sk pulse" style="font-size:9px">SMS</div>
+          <div class="box b-sk pulse" style="font-size:9px">EMAIL</div>
+          <div class="box b-sk pulse" style="font-size:9px">VOICE</div>
+          <div class="box b-sk pulse" style="font-size:9px">DIALER</div>
+          <div class="box b-vi pulse" style="font-size:9px">DIGITAL</div>
+          <div class="box b-sl pulse" style="font-size:9px">SYS</div>
+        </div>
+        <div class="grid3">
+          <div class="box feed xtall"><span class="lbl">Live Journeys</span><span class="meta">≤80 · name · stage · DPD</span></div>
+          <div class="box feed xtall b-vi"><span class="lbl">AI Agent Activity</span><span class="meta">summary + recent feed</span></div>
+          <div class="split">
+            <div class="box tall b-am"><span class="lbl">Escalation Queue</span><span class="meta">SLA countdown</span></div>
+            <div class="box tall b-ro"><span class="lbl">Compliance Blocks</span><span class="meta">rule · reason</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span><span class="c c-cto">CTO</span></div>
+        <p class="purpose">The cockpit. One glance tells you the portfolio is alive and being worked — events flowing, agents deciding, compliance firing, escalations queued.</p>
+        <h4>Panels, top to bottom</h4>
+        <ul>
+          <li><strong>6-tile pulse strip</strong> — active journeys, events/min, AI actions, escalations, compliance blocks, stage transitions</li>
+          <li><strong>Portfolio risk KPIs</strong> — cure rate, recovery $, enforcement %, PTP outcomes</li>
+          <li><strong>Strategy A/B table</strong> — champion vs challenger, side by side</li>
+          <li><strong>6 channel tiles</strong> — SMS / email / voice / dialer / digital / system rates</li>
+          <li><strong>3-column grid</strong> — live journeys · AI activity · escalations + compliance</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>opsPulse</code> <code>opsLiveJourneys</code> <code>opsChannelActivity</code> <code>opsAgentSummary</code> <code>opsPortfolioKpis</code> + WebSocket</p>
+        <span class="poll">⟳ 3–5s polling · live WS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 2 · Command Center ───── -->
+  <div class="pg" id="p2">
+    <div class="pg-head h-sky"><span class="num">02</span><span class="ttl">Command Center</span><span class="route">/command</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box b-sk" style="margin-bottom:6px"><span class="lbl">Portfolio bar · customers · $out · $past-due · DPD · PTPs</span><span class="meta">● Live WS</span></div>
+        <div class="row" style="align-items:stretch">
+          <div style="flex:1.4">
+            <div class="box" style="margin-bottom:5px"><span class="lbl">Filters: All · Channel · AI · Decisions · Compliance</span></div>
+            <div class="box feed xtall" style="min-height:200px"><span class="lbl">Live Event Stream</span><span class="meta">≤200 · chan icon · customer · type · intent · time</span></div>
+          </div>
+          <div style="flex:1">
+            <div class="box b-in xtall" style="min-height:240px"><span class="lbl">Customer 360 panel</span>
+              <span class="meta">name · stage · flags</span>
+              <div class="grid2" style="margin-top:6px">
+                <div class="box" style="font-size:9px">Risk◐</div><div class="box" style="font-size:9px">DPD</div>
+                <div class="box" style="font-size:9px">Balance</div><div class="box" style="font-size:9px">PastDue</div>
+              </div>
+              <div class="box b-em" style="margin-top:5px;font-size:9px">Active PTPs</div>
+              <div class="box b-vi" style="margin-top:5px;font-size:9px">AI traces · reasoning steps</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span><span class="c c-cto">CTO</span></div>
+        <p class="purpose">The live event inspector. Watch raw events stream in on the left; click any one to pull the full customer 360 into the right pane.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>Portfolio header bar</strong> — totals + live WS status pill</li>
+          <li><strong>Left pane</strong> — event stream (≤200) with filter tabs and intent badges</li>
+          <li><strong>Right pane</strong> — customer detail: risk gauge, DPD, balance, PTPs, recent activity, AI traces with expandable reasoning</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>listEvents</code> <code>dashboardMetrics</code> <code>getReasoningTraces</code> <code>getCustomer360</code> + WS <code>/ws/events/all</code></p>
+        <span class="poll">⟳ 10–15s · live WS stream</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 3 · Customer Search ───── -->
+  <div class="pg" id="p3">
+    <div class="pg-head h-slate"><span class="num">03</span><span class="ttl">Customer Search</span><span class="route">/customers</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="row"><div class="box" style="flex:2"><span class="lbl">🔍 Search by name / customer ID</span></div><div class="box"><span class="lbl">Stage ▾</span></div></div>
+        <div class="box" style="padding:0;overflow:hidden">
+          <div class="box b-sl" style="border:0;border-radius:0"><span class="lbl">Customer · Channel · Risk · DPD · Balance · Past Due · Stage · →</span></div>
+          <div class="feed" style="min-height:150px;border:0"></div>
+        </div>
+        <div class="row" style="margin-top:6px"><div class="box" style="flex:2;border:0;background:none"><span class="meta">Showing 1–20 of 200</span></div><div class="box" style="font-size:9px">‹ Prev</div><div class="box" style="font-size:9px">Next ›</div></div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span></div>
+        <p class="purpose">The directory. Find any of the 200 customers by name or ID, filter by delinquency stage, and click through to their full story.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>Search + stage filter</strong></li>
+          <li><strong>Paginated table</strong> — name, preferred channel, risk score (color-coded), DPD, balance, past due (red), stage badge</li>
+          <li><strong>Row → Customer Story</strong> drill-in</li>
+        </ul>
+        <h4>Data</h4>
+        <p><code>listCustomers(page, 20, search, segment)</code></p>
+        <span class="poll">⟳ on query change</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 4 · Agent Desktop ───── -->
+  <div class="pg" id="p4">
+    <div class="pg-head h-violet"><span class="num">04</span><span class="ttl">Agent Desktop</span><span class="route">/agent</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="row" style="align-items:stretch">
+          <div style="flex:.9">
+            <div class="box xtall" style="min-height:200px"><span class="lbl">🔍 Customer panel</span>
+              <span class="meta">name · email · phone · risk · value</span>
+              <div class="box b-ro" style="margin-top:6px;font-size:9px">Compliance flags</div>
+              <div class="box b-sl" style="margin-top:5px;font-size:9px">Accounts · balance · DPD</div>
+              <div class="box b-vi" style="margin-top:5px;font-size:9px">▸ Get AI Suggestions (Copilot)</div>
+            </div>
+          </div>
+          <div style="flex:1.3">
+            <div class="box b-vi" style="margin-bottom:5px"><span class="lbl">🤖 Digital Channel Agent</span><span class="meta">claude-sonnet-4-6</span></div>
+            <div class="box feed" style="min-height:150px"><span class="lbl">Chat — customer ↔ agent</span><span class="meta">action · confidence% · esc · tokens · latency</span></div>
+            <div class="row" style="margin-top:5px"><div class="box" style="flex:3;font-size:9px">Type a customer message…</div><div class="box b-vi" style="font-size:9px">Send</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span><span class="c c-cro">CRO</span></div>
+        <p class="purpose">The "try it yourself" surface. Pull up a customer, type a message as if you were them, and watch the Digital Channel Agent respond — with its confidence, token cost, and escalation decision attached.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>Left</strong> — customer lookup + profile + accounts + "Get AI Suggestions" (Copilot)</li>
+          <li><strong>Right</strong> — chat pane; each agent reply carries action badge, confidence %, escalation flag, tokens, latency</li>
+          <li><strong>Quick prompts</strong> — 4 predefined customer intents</li>
+        </ul>
+        <h4>Data</h4>
+        <p><code>getCustomer360</code> · mutations <code>invokeDigitalChannel</code> <code>invokeCopilot</code></p>
+        <span class="poll">on user interaction</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 5 · AI Explorer ───── -->
+  <div class="pg" id="p5">
+    <div class="pg-head h-violet"><span class="num">05</span><span class="ttl">AI Explorer</span><span class="route">/ai</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box b-vi" style="margin-bottom:6px"><span class="lbl">🧠 AI in the Collections Engine</span><span class="meta">auto-fired vs on-demand vs advisory</span></div>
+        <div class="box b-em" style="margin-bottom:6px"><span class="lbl">⟲ Live AI activity inside the orchestrator</span>
+          <div class="grid4" style="margin-top:6px">
+            <div class="box pulse" style="font-size:9px"><span class="big" style="font-size:12px">Digital</span>24h/5m</div>
+            <div class="box pulse" style="font-size:9px"><span class="big" style="font-size:12px">Quality</span>esc</div>
+            <div class="box pulse" style="font-size:9px"><span class="big" style="font-size:12px">Case</span>conf%</div>
+            <div class="box pulse" style="font-size:9px"><span class="big" style="font-size:12px">Portfolio</span></div>
+          </div>
+          <div class="box feed" style="margin-top:5px;min-height:48px;font-size:9px">Recent activity feed ≤15</div>
+        </div>
+        <div class="grid3">
+          <div class="box b-em" style="font-size:9px"><span class="lbl">Digital Channel</span>in-orchestrator</div>
+          <div class="box b-sk" style="font-size:9px"><span class="lbl">Copilot</span>advisory</div>
+          <div class="box b-sl" style="font-size:9px"><span class="lbl">Case Reasoning</span>on-demand</div>
+        </div>
+        <div class="box" style="margin-top:6px"><span class="lbl">▸ Invoke agent — input fields</span><span class="meta">results stack: rationale · steps · response · tokens</span></div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-cro">CRO</span><span class="c c-cco">CCO</span></div>
+        <p class="purpose">The proof that the AI is governable. Five Claude agents, each labeled by role (autonomous / advisory / on-demand), with a live activity feed and an interactive invoke-and-inspect panel.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>Live AI activity</strong> — per-agent summary + recent decision feed</li>
+          <li><strong>5 agent cards</strong> — Digital Channel, Copilot, Case Reasoning, Portfolio Intelligence, Quality Compliance</li>
+          <li><strong>Invoke + results stack</strong> — every result shows recorded rationale, reasoning steps, response, confidence, tokens, latency</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>opsAgentSummary</code> <code>opsAgentActivity</code> + 5 invoke mutations</p>
+        <span class="poll">⟳ 5–6s · invoke on demand</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 6 · Strategy Console ───── -->
+  <div class="pg" id="p6">
+    <div class="pg-head h-indigo"><span class="num">06</span><span class="ttl">Strategy Console</span><span class="route">/strategy</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box b-in" style="margin-bottom:6px"><span class="lbl">① "Why did we do that?" — case study flow</span></div>
+        <div class="row" style="margin-bottom:6px">
+          <div class="box" style="font-size:8px"><span class="lbl">Input</span></div><div class="arrow">→</div>
+          <div class="box b-sk" style="font-size:8px"><span class="lbl">Segment</span></div><div class="arrow">→</div>
+          <div class="box b-am" style="font-size:8px"><span class="lbl">Treat</span></div><div class="arrow">→</div>
+          <div class="box b-vi" style="font-size:8px"><span class="lbl">Route</span></div><div class="arrow">→</div>
+          <div class="box b-em" style="font-size:8px"><span class="lbl">Comply</span></div>
+        </div>
+        <div class="box b-am" style="margin-bottom:6px"><span class="lbl">② Champion vs Challenger — live A/B</span><span class="meta">version cards · 6 metrics · side-by-side compare</span></div>
+        <div class="grid2">
+          <div class="box b-in" style="font-size:9px"><span class="lbl">③ Segment heatmap</span>DPD × risk</div>
+          <div class="box b-am" style="font-size:9px"><span class="lbl">Treatment by segment</span></div>
+        </div>
+        <div class="box feed" style="margin-top:6px;min-height:50px"><span class="lbl">④ Live OPA evaluations — audit trail</span><span class="meta">when · customer · version · segment · treatment · allowed</span></div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-cro">CRO</span><span class="c c-coo">COO</span></div>
+        <p class="purpose">Four visual stories about the strategy engine — built so a non-engineer can see exactly why the platform made each decision, and how strategies are A/B tested.</p>
+        <h4>The four stories</h4>
+        <ul>
+          <li><strong>Case-study flow</strong> — 5 policy stations (input → segment → treatment → routing → compliance) showing verbatim OPA Rego output</li>
+          <li><strong>Champion vs challenger</strong> — live A/B version cards + side-by-side compare</li>
+          <li><strong>Policy heatmaps</strong> — segment distribution + treatment + compliance firing</li>
+          <li><strong>Live OPA audit trail</strong> — recent decisions with expandable input/output JSON</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>evaluateFull</code> <code>strategyVersionComparison</code> <code>strategy*Matrix</code> <code>strategyRecentDecisions</code></p>
+        <span class="poll">⟳ 8–30s · evaluate on demand</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 7 · Platform Ops ───── -->
+  <div class="pg" id="p7">
+    <div class="pg-head h-slate"><span class="num">07</span><span class="ttl">Platform Operations</span><span class="route">/platform</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="grid5">
+          <div class="box b-sk pulse"><span class="big">38</span>evt/s</div>
+          <div class="box b-em pulse"><span class="big">8/8</span>svcs</div>
+          <div class="box b-sk pulse"><span class="big">12</span>topics</div>
+          <div class="box b-in pulse"><span class="big">4</span>policies</div>
+          <div class="box b-em pulse"><span class="big">0</span>lag</div>
+        </div>
+        <div class="box" style="margin-bottom:6px"><span class="lbl">Service topology</span>
+          <div class="grid4" style="margin-top:6px">
+            <div class="box b-em" style="font-size:8px">api ✓</div><div class="box b-em" style="font-size:8px">worker ✓</div>
+            <div class="box b-em" style="font-size:8px">bridge ✓</div><div class="box b-em" style="font-size:8px">projector ✓</div>
+          </div>
+        </div>
+        <div class="box b-sk" style="margin-bottom:6px"><span class="lbl">Kafka topics — partitions · msgs · throughput · offsets</span></div>
+        <div class="grid2">
+          <div class="box" style="font-size:9px"><span class="lbl">Consumer lag by group</span>per-partition</div>
+          <div class="box feed" style="font-size:9px"><span class="lbl">OPA decision feed</span>≤50</div>
+        </div>
+        <div class="box b-in" style="margin-top:6px"><span class="lbl">🔍 Trace event end-to-end</span><span class="meta">paste event_id → all hops with timing</span></div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-cto">CTO</span><span class="c c-eng">SRE</span></div>
+        <p class="purpose">What your on-call opens at 3am. Service health, Kafka topology, per-partition consumer lag, the live OPA decision feed, and an end-to-end trace viewer.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>5 health tiles</strong> — events/sec, services healthy, topics, policies, total lag</li>
+          <li><strong>Service topology grid</strong> — heartbeat per service: throughput, p99, errors, last-seen</li>
+          <li><strong>Kafka topics table</strong> — partitions, messages, throughput, per-partition offsets</li>
+          <li><strong>Consumer lag</strong> (per group, per partition) + <strong>OPA decision feed</strong></li>
+          <li><strong>Trace viewer</strong> — paste an event_id, get every hop with timing</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>platformHealth</code> <code>platformServices</code> <code>platformKafkaTopics</code> <code>platformConsumerLag</code> <code>platformOpaDecisions</code> <code>platformTrace</code></p>
+        <span class="poll">⟳ 5–30s · trace on demand</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 8 · Lakehouse ───── -->
+  <div class="pg" id="p8">
+    <div class="pg-head h-sky"><span class="num">08</span><span class="ttl">Data Lakehouse</span><span class="route">/lakehouse</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="row" style="margin-bottom:6px">
+          <div class="box b-am tall" style="font-size:9px"><span class="lbl">🗄 Bronze</span>JSONL · objects · size · topics</div>
+          <div class="arrow">→</div>
+          <div class="box b-sl tall" style="font-size:9px"><span class="lbl">▽ Silver</span>typed Parquet · partitions</div>
+          <div class="arrow">→</div>
+          <div class="box b-am tall" style="font-size:9px;background:#fef9c3;border-color:#fde047"><span class="lbl">▥ Gold</span>marts · rows</div>
+        </div>
+        <div class="box b-in" style="margin-bottom:6px"><span class="lbl">Data lineage — event_id across 6 tiers</span></div>
+        <div class="grid2">
+          <div class="box" style="font-size:9px"><span class="lbl">Recent bronze objects</span>key · size · modified</div>
+          <div class="box" style="font-size:9px"><span class="lbl">Silver partitions</span>topic · date · rows</div>
+        </div>
+        <div class="box b-in" style="margin-top:6px"><span class="lbl"># Ad-hoc query — DuckDB over S3 Parquet</span><span class="meta">saved queries · SQL editor · results · elapsed_ms</span></div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-cto">CTO</span></div>
+        <p class="purpose">The data story. A real S3 medallion lakehouse — Bronze JSONL → Silver Parquet → Gold marts — with event lineage across all six tiers and a live DuckDB query box.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>Medallion topology</strong> — Bronze → Silver → Gold flow, each with object/row counts + size</li>
+          <li><strong>Data lineage</strong> — trace one event_id across Kafka, Bronze, Silver, Gold, Postgres, Redis</li>
+          <li><strong>Recent objects + partitions</strong> tables</li>
+          <li><strong>Gold marts</strong> — customer 360 / portfolio / compliance / strategy, with samples</li>
+          <li><strong>DuckDB query editor</strong> — run SQL over Parquet, see elapsed_ms</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>lakehouseTopology</code> <code>lakehouseBronzeObjects</code> <code>lakehouseSilverPartitions</code> <code>lakehouseGoldMarts</code> <code>lakehouseQuery</code></p>
+        <span class="poll">⟳ 8–30s · query on demand</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 9 · Risk & ML ───── -->
+  <div class="pg" id="p9">
+    <div class="pg-head h-indigo"><span class="num">09</span><span class="ttl">Risk &amp; ML Platform</span><span class="route">/risk-ml</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box b-em" style="margin-bottom:6px"><span class="lbl">① Risk model card</span>
+          <div class="grid6" style="margin-top:6px">
+            <div class="box pulse" style="font-size:8px"><span class="big" style="font-size:11px">✓</span>status</div>
+            <div class="box pulse" style="font-size:8px"><span class="big" style="font-size:11px">.78</span>AUC</div>
+            <div class="box pulse" style="font-size:8px"><span class="big" style="font-size:11px">.12</span>Brier</div>
+            <div class="box pulse" style="font-size:8px"><span class="big" style="font-size:11px">1.2k</span>rows</div>
+            <div class="box pulse" style="font-size:8px"><span class="big" style="font-size:11px">31%</span>pos</div>
+            <div class="box pulse" style="font-size:8px"><span class="big" style="font-size:11px">25</span>feat</div>
+          </div>
+          <div class="box" style="margin-top:5px;font-size:8px">▮▮▮▮▮ feature importance (top 15)</div>
+        </div>
+        <div class="grid2">
+          <div class="box b-ro" style="font-size:9px"><span class="lbl">② Score a customer</span>P(worsen 7d) · band · contributors</div>
+          <div class="box b-in" style="font-size:9px"><span class="lbl">③ Roll-rate Markov</span>30/60/90d · transition matrix</div>
+        </div>
+        <div class="grid2" style="margin-top:6px">
+          <div class="box b-am" style="font-size:9px"><span class="lbl">④ A/B significance</span>lift · p-value · CI · req-n</div>
+          <div class="box b-em" style="font-size:9px"><span class="lbl">⑤ Recovery + cohort vintage</span></div>
+        </div>
+        <div class="box" style="margin-top:6px;background:#fef9c3;border-color:#fde047"><span class="lbl">⑥ AI cost &amp; token spend</span><span class="meta">7d $ · rate card · per-agent/day breakdown</span></div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-cro">CRO</span></div>
+        <p class="purpose">Where the CRO sees the platform speaks their language: a real trained model, statistically rigorous A/B, roll-rate forecasting, and cost transparency.</p>
+        <h4>Six sections</h4>
+        <ul>
+          <li><strong>Model card</strong> — AUC, Brier, training rows, feature importance bars</li>
+          <li><strong>Score a customer</strong> — P(worsen in 7d), risk band, top contributors with z-scores</li>
+          <li><strong>Roll-rate Markov</strong> — 30/60/90-day projection + transition matrix heatmap</li>
+          <li><strong>A/B significance</strong> — lift, p-value, 95% CI, required-n per arm</li>
+          <li><strong>Recovery curves + cohort vintage</strong></li>
+          <li><strong>AI cost</strong> — 7-day spend, rate card, per-agent/day tokens</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>riskModelCard</code> <code>riskScore</code> <code>riskRollRate</code> <code>riskAbSignificance</code> <code>riskRecoveryCurves</code> <code>riskAiCost</code></p>
+        <span class="poll">⟳ 20–60s · score/retrain on demand</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── 10 · Scenarios ───── -->
+  <div class="pg" id="p10">
+    <div class="pg-head h-emerald"><span class="num">10</span><span class="ttl">Scenarios</span><span class="route">/scenarios</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box b-em" style="margin-bottom:6px"><span class="lbl">▶ Demo Scenarios</span><span class="meta">pre-scripted journeys</span></div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="box" style="font-size:9px"><span class="lbl">Cross-Channel</span>CUST-0032 · ▶ Run</div>
+          <div class="box" style="font-size:9px"><span class="lbl">Bankruptcy</span>CUST-0095 · ▶ Run</div>
+        </div>
+        <div class="box b-sl" style="margin-bottom:6px;font-size:9px;text-align:center">— theater view when running —</div>
+        <div class="row" style="margin-bottom:6px">
+          <div class="box b-em" style="font-size:8px">①✓</div><div class="arrow" style="flex:0 0 10px">·</div>
+          <div class="box b-sk" style="font-size:8px">②◉</div><div class="arrow" style="flex:0 0 10px">·</div>
+          <div class="box" style="font-size:8px">③</div><div class="arrow" style="flex:0 0 10px">·</div>
+          <div class="box" style="font-size:8px">④</div>
+        </div>
+        <div class="row" style="align-items:stretch">
+          <div class="box feed xtall" style="flex:1.3"><span class="lbl">Live event stream</span><span class="meta">animated · direction · intent</span></div>
+          <div class="box b-in xtall" style="flex:1"><span class="lbl">Customer context</span><span class="meta">risk · DPD · workflow state · final result</span></div>
+        </div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span><span class="c c-cco">CCO</span></div>
+        <p class="purpose">The director's chair. Pick a pre-scripted scenario and watch it play out live — a step tracker on top, the event stream on the left, the customer's evolving state on the right.</p>
+        <h4>Two modes</h4>
+        <ul>
+          <li><strong>Scenario list</strong> — cards with description, default customer, expandable steps</li>
+          <li><strong>Theater view</strong> — horizontal step progress, live event stream (animated), customer context panel with workflow state + final result</li>
+        </ul>
+        <h4>Scenarios available</h4>
+        <ul>
+          <li>Cross-channel journey (Jane Doe) · Bankruptcy suppression (Robert Chen) · PTP lifecycle (Maria Garcia) · Complex AI case (David Park) · Strategy hot-swap · Portfolio operations</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>listScenarios</code> <code>runScenario</code> <code>getJourneyState</code> + WS <code>/ws/events/all</code></p>
+        <span class="poll">⟳ 2–3s during run · live WS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───── Deep-link surfaces ───── -->
+  <h2 class="section">Deep-link surfaces · reached by clicking a customer</h2>
+
+  <!-- Customer Story -->
+  <div class="pg">
+    <div class="pg-head h-ink"><span class="num">↳</span><span class="ttl">Customer Story</span><span class="route">/customer/:id</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box" style="margin-bottom:6px"><span class="lbl">◐ [Name] · stage · flags · DPD · balance · past-due</span></div>
+        <div class="box b-vi" style="margin-bottom:6px"><span class="lbl">✦ The Story So Far</span><span class="meta">AI-generated narrative (Markdown) · model · tokens</span></div>
+        <div class="box b-vi" style="margin-bottom:6px"><span class="lbl">✦ Activity Digest</span><span class="meta">24h/7d/30d/all · highlights · multi-dimensional AI summary</span></div>
+        <div class="grid4">
+          <div class="box pulse" style="font-size:9px"><span class="big" style="font-size:12px">Σ</span>events</div>
+          <div class="box pulse" style="font-size:9px"><span class="big" style="font-size:12px">⚡</span>evals</div>
+          <div class="box b-vi pulse" style="font-size:9px"><span class="big" style="font-size:12px">🧠</span>AI</div>
+          <div class="box b-ro pulse" style="font-size:9px"><span class="big" style="font-size:12px">!</span>esc</div>
+        </div>
+        <div class="row" style="align-items:stretch">
+          <div class="box feed xtall" style="flex:2"><span class="lbl">Timeline (2/3)</span><span class="meta">events + linked AI actions, expandable</span></div>
+          <div class="split" style="flex:1">
+            <div class="box b-am tall" style="font-size:9px"><span class="lbl">Strategy decisions</span></div>
+            <div class="box b-ro tall" style="font-size:9px"><span class="lbl">Escalations</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span><span class="c c-cco">CCO</span></div>
+        <p class="purpose">The narrative view of one customer — opens with an AI-written "story so far," then a multi-dimensional activity digest, then the full event timeline that doubles as the audit trail.</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>AI narrative</strong> — "The Story So Far," generated from the event history</li>
+          <li><strong>Activity Digest</strong> — windowed (24h…all), with severity-tagged highlights</li>
+          <li><strong>4 pulse boxes</strong> — events, strategy evals, AI actions, escalations</li>
+          <li><strong>Timeline (2/3)</strong> + <strong>strategy decisions &amp; escalations (1/3)</strong></li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>storyNarrative</code> <code>storyTimeline</code> <code>storyDecisions</code> <code>storyAgentActions</code> <code>storyActivityDigest</code></p>
+        <span class="poll">⟳ 8–15s · narrative lazy-loaded</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer Journey -->
+  <div class="pg">
+    <div class="pg-head h-ink"><span class="num">↳</span><span class="ttl">Customer Journey</span><span class="route">/customer/:id/timeline</span></div>
+    <div class="pg-body">
+      <div class="mock wf">
+        <div class="box b-in" style="margin-bottom:6px"><span class="lbl">◐ Profile hero — contact · risk◐ · behavioral◐ · stage</span></div>
+        <div class="row" style="align-items:stretch">
+          <div class="box feed xtall" style="flex:1.85;min-height:170px"><span class="lbl">Cross-channel timeline (65%)</span><span class="meta">date separators · live badge · channel dots · expand JSON</span></div>
+          <div class="split" style="flex:1">
+            <div class="box" style="font-size:8px"><span class="lbl">Journey state</span>stage progress</div>
+            <div class="box b-ro" style="font-size:8px"><span class="lbl">Compliance</span></div>
+            <div class="box b-em" style="font-size:8px"><span class="lbl">PTPs</span></div>
+            <div class="box" style="font-size:8px"><span class="lbl">Payments</span>≤5</div>
+            <div class="box b-vi" style="font-size:8px"><span class="lbl">AI traces</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="desc">
+        <div class="who"><span class="c c-coo">COO</span><span class="c c-cto">CTO</span></div>
+        <p class="purpose">The forensic view — a 65/35 split with a rich cross-channel timeline on the left and five state panels stacked on the right. This is what proves "full history, replayable."</p>
+        <h4>Panels</h4>
+        <ul>
+          <li><strong>Profile hero</strong> — full contact card, risk + behavioral gauges, stage</li>
+          <li><strong>Timeline (65%)</strong> — date-grouped, live-badged, channel-colored, expandable payloads</li>
+          <li><strong>Right sidebar (35%)</strong> — journey state w/ stage progress · compliance · PTPs · payments · AI traces</li>
+        </ul>
+        <h4>Data &amp; refresh</h4>
+        <p><code>getCustomer360</code> <code>eventTimeline</code> <code>getCustomerPayments</code> <code>getJourneyState</code> <code>getReasoningTraces</code> + WS <code>/ws/events/:id</code></p>
+        <span class="poll">live WS · fetch on mount</span>
+      </div>
+    </div>
+  </div>
+
+  <p style="color:var(--muted);font-size:12px;margin-top:30px;border-top:1px solid var(--line);padding-top:14px;">
+    Wireframes are schematic — they show panel arrangement and domain color, not pixel-exact layout. Every panel listed maps to a real component reading live data from the API endpoints noted.
+    There is also a legacy <code>OpsDashboard</code> component in the codebase that is no longer routed (superseded by Operations Floor).
+  </p>
+
+</div>
+</body>
+</html>

@@ -8,9 +8,7 @@ help:  ## Show this help
 	@awk 'BEGIN {FS=":.*##"; printf "Usage: make <target>\n\nTargets:\n"} \
 	     /^[a-zA-Z_-]+:.*?##/ {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up:  ## Build and start everything (one command, end-to-end)
-	@echo "→ Building images (first time takes 3-5 min)…"
-	docker compose build
+up:  ## Start everything. Reuses existing images (builds only if missing). Fast.
 	@echo "→ Starting infrastructure…"
 	docker compose up -d postgres redis kafka temporal opa
 	@echo "→ Waiting for infrastructure to be healthy…"
@@ -20,7 +18,7 @@ up:  ## Build and start everything (one command, end-to-end)
 	@echo "→ Starting backend services + web…"
 	docker compose up -d api worker signal-bridge event-projector traffic-generator lake-sink silver-compactor gold-builder temporal-ui web
 	@echo ""
-	@echo "✓ All services up. Opening URLs…"
+	@echo "✓ All services up."
 	@echo ""
 	@echo "  Frontend (Caddy):  http://localhost"
 	@echo "  API docs:          http://localhost:8000/docs"
@@ -28,13 +26,18 @@ up:  ## Build and start everything (one command, end-to-end)
 	@echo ""
 	@echo "Tail logs:  make logs           (all)"
 	@echo "            make logs SVC=api   (one)"
+	@echo "Changed code? Run 'make rebuild' to rebuild only what changed, then 'make up'."
+
+rebuild:  ## Rebuild images (layer-cached — only rebuilds what changed), then restart app
+	docker compose build
+	docker compose up -d --force-recreate api worker signal-bridge event-projector traffic-generator lake-sink silver-compactor gold-builder web
 
 down:  ## Stop all services (preserves data)
 	docker compose down
 
 restart:  ## Restart everything (down + up, no rebuild)
 	docker compose down
-	docker compose up -d
+	$(MAKE) up
 
 logs:  ## Tail logs. Use SVC=<name> for one service (e.g. make logs SVC=api)
 	@if [ -n "$(SVC)" ]; then docker compose logs -f $(SVC); else docker compose logs -f --tail=100; fi
