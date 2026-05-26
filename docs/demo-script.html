@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Collections Orchestration — Demo Script</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --ink: #0f172a;
+    --ink2: #334155;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg: #ffffff;
+    --bg-soft: #f8fafc;
+    --bg-amber: #fffbeb;
+    --bg-emerald: #f0fdf4;
+    --bg-violet: #f5f3ff;
+    --bg-rose: #fff1f2;
+    --bg-sky: #f0f9ff;
+    --accent: #0f766e;
+    --accent2: #b45309;
+    --rule: #cbd5e1;
+  }
+  html, body { background: var(--bg); color: var(--ink); }
+  body {
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 48px 56px 96px; }
+
+  /* Title block */
+  .hero {
+    border-bottom: 4px solid var(--ink);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .hero .kicker {
+    font: 600 11px/1 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .hero h1 {
+    font: 700 36px/1.15 Georgia, "Iowan Old Style", "Apple Garamond", serif;
+    margin: 0 0 8px;
+  }
+  .hero .sub {
+    color: var(--ink2);
+    font-size: 17px;
+    margin-bottom: 20px;
+    max-width: 720px;
+  }
+  .meta {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    font-size: 12px;
+  }
+  .meta div {
+    background: var(--bg-soft);
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  .meta strong {
+    display: block;
+    color: var(--muted);
+    font: 600 10px/1.4 ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .meta span { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font: 700 22px/1.2 Georgia, "Iowan Old Style", serif;
+    margin: 56px 0 16px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--ink);
+  }
+  h3 {
+    font: 700 16px/1.3 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    margin: 28px 0 10px;
+    color: var(--ink);
+  }
+  p, li { color: var(--ink2); }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 22px; margin: 8px 0; }
+  li { margin-bottom: 4px; }
+  code, kbd {
+    font: 13px/1 ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: #f1f5f9;
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--ink);
+    border: 1px solid #e2e8f0;
+  }
+  kbd {
+    background: #fff;
+    box-shadow: 0 1px 0 #cbd5e1;
+    padding: 2px 7px;
+    font-size: 12px;
+  }
+
+  /* Arc box */
+  .arc {
+    background: var(--bg-soft);
+    border-left: 4px solid var(--accent);
+    padding: 18px 22px;
+    margin: 24px 0 36px;
+    border-radius: 0 6px 6px 0;
+  }
+  .arc .label {
+    font: 700 11px/1 ui-monospace, monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  /* Pre-flight checklist */
+  .checklist {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 16px 0;
+    background: var(--bg-soft);
+  }
+  .checklist h4 {
+    margin: 4px 0 8px;
+    font: 700 13px/1 ui-monospace, monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent2);
+  }
+  .checklist ol { padding-left: 20px; }
+  .checklist code { font-size: 12px; }
+
+  /* Stops */
+  .stop {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 0;
+    margin: 28px 0;
+    overflow: hidden;
+    page-break-inside: avoid;
+  }
+  .stop-header {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 24px;
+  }
+  .stop-header .num {
+    font: 700 11px/1 ui-monospace, monospace;
+    letter-spacing: 0.14em;
+    color: #94a3b8;
+    text-transform: uppercase;
+  }
+  .stop-header .title {
+    font: 700 18px/1.2 Georgia, serif;
+    color: #fff;
+    flex: 1;
+    margin: 0 14px;
+  }
+  .stop-header .time {
+    font: 600 11px/1 ui-monospace, monospace;
+    color: #fbbf24;
+    background: rgba(251,191,36,0.12);
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(251,191,36,0.3);
+  }
+  .stop-meta {
+    background: var(--bg-soft);
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 16px;
+    font-size: 13px;
+  }
+  .stop-meta .k {
+    font: 700 10px/1 ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    align-self: center;
+  }
+  .stop-meta .v { color: var(--ink); }
+  .stop-meta .v code { font-size: 12px; }
+
+  .stop-body { padding: 18px 24px 22px; }
+
+  .sub-h {
+    font: 700 11px/1 ui-monospace, monospace;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 18px 0 8px;
+  }
+  .sub-h.amber { color: var(--accent2); }
+
+  .say {
+    background: #fff;
+    border-left: 3px solid var(--accent);
+    padding: 12px 18px;
+    border-radius: 0 6px 6px 0;
+    margin: 8px 0;
+    font: italic 15px/1.55 Georgia, "Iowan Old Style", serif;
+    color: var(--ink);
+  }
+
+  .show {
+    background: var(--bg-soft);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    font-size: 14px;
+  }
+  .show ul { margin: 0; padding-left: 18px; }
+  .show li { color: var(--ink); }
+
+  .qa {
+    margin: 10px 0;
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+  }
+  .qa .q {
+    font-weight: 600;
+    color: var(--ink);
+    margin: 12px 0 4px;
+  }
+  .qa .q::before {
+    content: "Q.";
+    color: var(--accent2);
+    font: 700 11px/1 ui-monospace, monospace;
+    margin-right: 6px;
+    letter-spacing: 0.06em;
+  }
+  .qa .a {
+    color: var(--ink2);
+    margin: 0 0 8px 24px;
+  }
+  .qa .a::before {
+    content: "A. ";
+    color: var(--accent);
+    font: 700 11px/1 ui-monospace, monospace;
+    letter-spacing: 0.06em;
+    margin-left: -24px;
+    margin-right: 6px;
+  }
+
+  /* Customer card */
+  .card-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px 14px;
+    background: var(--bg-soft);
+    font-size: 13px;
+  }
+  .card .name {
+    font: 700 14px/1.2 Georgia, serif;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .card .id {
+    font: 11px/1 ui-monospace, monospace;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .card .stat {
+    font-size: 12px;
+    color: var(--ink2);
+    margin-bottom: 2px;
+  }
+
+  /* Cues */
+  .cue {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font: 700 11px/1 ui-monospace, monospace;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-right: 6px;
+  }
+  .cue.cto { background: #ecfeff; color: #0e7490; border: 1px solid #a5f3fc; }
+  .cue.cro { background: #faf5ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+  .cue.cco { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+  .cue.coo { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
+
+  /* Closing */
+  .closing {
+    background: var(--ink);
+    color: #fff;
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin: 40px 0 16px;
+  }
+  .closing h3 { color: #fff; margin: 0 0 12px; font-size: 18px; }
+  .closing p { color: #cbd5e1; }
+  .closing strong { color: #fff; }
+
+  /* Appendix */
+  .appendix {
+    margin-top: 56px;
+    border-top: 2px dashed var(--line);
+    padding-top: 24px;
+  }
+  .appendix .col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .appendix h3 { margin-top: 8px; }
+  .ap-card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+    background: var(--bg-soft);
+    font-size: 13px;
+  }
+  .ap-card strong { color: var(--ink); }
+
+  table.simple {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+  table.simple th, table.simple td {
+    border-bottom: 1px solid var(--line);
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.simple th {
+    font: 700 11px/1 ui-monospace, monospace;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--bg-soft);
+  }
+
+  hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+
+  /* Print */
+  @media print {
+    .page { padding: 24px; max-width: none; }
+    .stop { page-break-inside: avoid; }
+    .stop-header { background: #000; }
+    h2 { page-break-after: avoid; }
+    .checklist, .closing { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="kicker">Demo Script · v1.0 · Internal use</div>
+    <h1>Real-time Collections Orchestration</h1>
+    <p class="sub">A 20-minute, persona-by-persona walk through a real, bank-grade decisioning platform. Every dashboard you see is reading live data; every AI decision is real; every compliance gate is enforcing real Reg F policy.</p>
+    <div class="meta">
+      <div><strong>Audience</strong><span>CTO · CRO · CCO · COO</span></div>
+      <div><strong>Runtime</strong><span>20 minutes core + 10 Q&A</span></div>
+      <div><strong>Format</strong><span>8 stops, persona-by-persona</span></div>
+      <div><strong>URL</strong><span>http://localhost:5173</span></div>
+    </div>
+  </div>
+
+  <!-- Story arc -->
+  <div class="arc">
+    <div class="label">The story you are telling</div>
+    <p style="margin:0; color:var(--ink); font-size:16px;">
+      Collections today is a stack of disconnected tools — a dialer here, a strategy spreadsheet there,
+      a compliance team manually checking everything after the fact, and a CRO who has no way to
+      know if last month's strategy change actually helped. <strong>This platform replaces that
+      with one orchestrator</strong>: every customer journey is a workflow, every decision is logged
+      and explainable, every action is gated by policy at the millisecond it's taken, and every
+      stakeholder gets a surface that answers their first ten questions without scrolling.
+    </p>
+    <p style="margin:10px 0 0; color:var(--ink); font-size:16px;">
+      <strong>The arc:</strong> open with a portfolio-wide view → drill into one customer's story →
+      show the AI making decisions you can audit → show compliance blocking an action live →
+      show the risk model + A/B framework that makes this defensible → show the lakehouse and
+      lineage that makes it analyzable → show the runtime that makes it operable → leave them
+      with the 12-week roadmap.
+    </p>
+  </div>
+
+  <!-- Pre-flight -->
+  <h2>Pre-flight checklist · 10 minutes before</h2>
+  <div class="checklist">
+    <h4>Stack health</h4>
+    <ol>
+      <li><strong>Backend is up.</strong> Run <code>curl -s http://localhost:8000/api/health</code> — expect <code>{"status":"ok"}</code>.</li>
+      <li><strong>Frontend is up.</strong> Open <code>http://localhost:5173</code> in your browser. Each page should load without an error banner.</li>
+      <li><strong>Traffic is flowing.</strong> The Operations Floor pulse strip should show non-zero events/min after 30 seconds. If it's flat, the traffic generator died — restart with <code>uv run python -m scripts.run_services</code>.</li>
+      <li><strong>AI agents have fired.</strong> The AI Explorer page should have at least 3 reasoning traces visible. If it's empty, give it 60 more seconds (traffic generator gradually escalates intents).</li>
+    </ol>
+    <h4 style="margin-top:18px">Browser setup</h4>
+    <ol>
+      <li>Window size: maximize, or at minimum 1440 × 900. The dashboards are dense by design.</li>
+      <li>Zoom: 100% (Cmd-0). Not 110%, not 90% — the layout assumes 100%.</li>
+      <li>Two tabs prepared: <strong>Tab 1</strong> on Operations Floor (your opening), <strong>Tab 2</strong> on Customer Story for CUST-0032 (your first drill-in).</li>
+      <li>Close DevTools. Close other browser windows. Mirror your screen if presenting.</li>
+    </ol>
+    <h4 style="margin-top:18px">Talk-track props</h4>
+    <ol>
+      <li>Have this script open on a phone or second monitor — don't read it word-for-word, but use it for stop boundaries.</li>
+      <li>Have <code>docs/platform-brief.html</code> ready to leave behind.</li>
+      <li>One sentence answer ready for "how long would this take to build for us?" → 12 weeks to first stakeholder demo, 6 months to production-grade.</li>
+    </ol>
+  </div>
+
+  <h3>The four anchor customers</h3>
+  <p>Use these characters by name — it makes the demo feel like a real bank, not a slide deck.</p>
+  <div class="card-row">
+    <div class="card">
+      <div class="name">Jane Doe</div>
+      <div class="id">CUST-0032 · DPD 45</div>
+      <div class="stat">Cross-channel journey</div>
+      <div class="stat">SMS → hardship → voice</div>
+      <div class="stat" style="color:var(--accent);"><strong>Your hero customer</strong></div>
+    </div>
+    <div class="card">
+      <div class="name">Robert Chen</div>
+      <div class="id">CUST-0095</div>
+      <div class="stat">Bankruptcy filed</div>
+      <div class="stat">All outbound suppressed</div>
+      <div class="stat">Compliance proof case</div>
+    </div>
+    <div class="card">
+      <div class="name">Maria Garcia</div>
+      <div class="id">CUST-0055</div>
+      <div class="stat">PTP active</div>
+      <div class="stat">Voice → arrangement → cure</div>
+      <div class="stat">Lifecycle proof case</div>
+    </div>
+    <div class="card">
+      <div class="name">David Park</div>
+      <div class="id">CUST-0120</div>
+      <div class="stat">Conflicting signals</div>
+      <div class="stat">PTP + dispute</div>
+      <div class="stat">AI reasoning proof</div>
+    </div>
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <!-- STOPS -->
+  <!-- ───────────────────────────────────────────────────────────────── -->
+
+  <h2>The demo · 8 stops</h2>
+
+  <!-- STOP 1 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 1 of 8</div>
+      <div class="title">The Operations Floor — open with motion</div>
+      <div class="time">2 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue coo">COO</span><span class="cue cto">CTO</span>Everyone in the room — sets the credibility bar</div>
+      <div class="k">Navigate to</div><div class="v"><code>http://localhost:5173/</code> → <strong>Operations Floor</strong> (landing page)</div>
+      <div class="k">What to do</div><div class="v">Just sit on the page. Don't click. Let them watch the pulse strip update every 3 seconds. Wait 15 seconds before speaking.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say (after 15 sec of silence while they watch)</div>
+      <div class="say">
+        "Everything you're seeing is real. Two hundred customers, three hundred-plus accounts, twenty-one
+        million dollars outstanding. The platform is processing channel events, evaluating strategies,
+        invoking AI agents, and enforcing compliance gates — right now, in front of you. The numbers
+        you see in the pulse strip are updating because work is actually happening, not because
+        a refresh timer is firing on a mock."
+      </div>
+
+      <div class="sub-h">Show (point to specific tiles, in this order)</div>
+      <div class="show">
+        <ul>
+          <li><strong>Top pulse strip:</strong> events/min, active journeys, AI decisions/hr, compliance gates fired.</li>
+          <li><strong>Live event feed (left):</strong> notice channel diversity — SMS, voice, dialer, payment. Real Kafka events.</li>
+          <li><strong>DPD distribution (right):</strong> the four buckets — current, 1-29, 30-59, 60-89, 90+. Real portfolio shape.</li>
+          <li><strong>Active workflows count:</strong> each one is a per-customer Temporal workflow with full history.</li>
+        </ul>
+      </div>
+
+      <div class="sub-h amber">Anticipated questions</div>
+      <div class="qa">
+        <div class="q">Is this hitting a real database?</div>
+        <div class="a">Yes — Postgres for operational data, S3 for the lakehouse, Kafka for the event spine, Temporal for orchestration. Show them <code>http://localhost:8000/docs</code> if they want to see the API surface.</div>
+        <div class="q">How many concurrent customers can it handle?</div>
+        <div class="a">"Today, hundreds in this single-box demo. The architecture scales horizontally — Kafka partitions, Temporal workers, Postgres read replicas. We've sized capacity in the roadmap; happy to walk through it after the demo."</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 2 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 2 of 8</div>
+      <div class="title">Customer Story — drill into Jane Doe (CUST-0032)</div>
+      <div class="time">3 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue coo">COO</span>Collections operations leader. This is "what does my agent see?"</div>
+      <div class="k">Navigate to</div><div class="v"><strong>Customer Story</strong> in the left nav → search/select <code>CUST-0032</code> (Jane Doe)</div>
+      <div class="k">What to do</div><div class="v">Scroll slowly down the page. Stop at the journey timeline. Click into one event to expand it.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "This is Jane Doe. She's a real synthetic customer — 45 days past due, mid-bucket. What I want
+        to show you is what the platform <em>knows</em> about her, and how every decision it makes is
+        traceable. Look at this journey timeline: every channel event, every strategy decision, every
+        AI invocation, every compliance check — they're all here, in order, with their
+        outcomes. This is your audit trail. This is also what an agent sees when they open her case."
+      </div>
+
+      <div class="sub-h">Show (in this order)</div>
+      <div class="show">
+        <ul>
+          <li><strong>Customer header card</strong> — DPD, balance, segment, risk score, behavioral score, compliance flags.</li>
+          <li><strong>Journey timeline</strong> — scroll through it slowly. Point out the variety: SMS, voice, dialer outcomes, AI reasoning steps.</li>
+          <li><strong>Click into one AI reasoning event</strong> — show the input context, the reasoning text, the action chosen, the confidence.</li>
+          <li><strong>Active workflow snapshot</strong> — point out: this is a Temporal workflow with full history. You could replay it.</li>
+        </ul>
+      </div>
+
+      <div class="sub-h amber">Anticipated questions</div>
+      <div class="qa">
+        <div class="q">If something goes wrong with Jane, how do I trace it back?</div>
+        <div class="a">"You see it right here. The journey timeline is the audit trail. Every event has a correlation ID that ties channel-event → workflow signal → strategy decision → AI invocation → action dispatch → compliance check. We'll show you the full lineage on Stop 6."</div>
+        <div class="q">What if a regulator asks 'why did you call her at 7pm?' two years from now?</div>
+        <div class="a">"The platform stores every input that went into the OPA decision, the policy version that was active, the strategy version that was chosen, and the outcome. We retain the full reasoning, not just the action. You'd query the lakehouse for that customer and that timestamp and get the full chain in seconds."</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 3 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 3 of 8</div>
+      <div class="title">AI Explorer — governable AI</div>
+      <div class="time">2.5 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue cro">CRO</span><span class="cue cco">CCO</span>The "is your AI safe?" question, answered with evidence</div>
+      <div class="k">Navigate to</div><div class="v"><strong>AI Explorer</strong> → top of the page (decision feed)</div>
+      <div class="k">What to do</div><div class="v">Show the live decision feed; click into one decision to expand reasoning.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "Every AI agent in this platform is governable — meaning every single decision is a structured
+        record with the inputs that went in, the reasoning text from the model, the action it chose,
+        a confidence number, and whether it was escalated to a human. The agents can't take a free-form
+        action. They have to invoke a tool we've defined — <code>record_decision</code>, <code>escalate</code>,
+        <code>request_review</code>, and so on. Every tool call is logged. If a regulator asks 'why did
+        your AI do this?' — you can show them exactly what the model saw and exactly what it decided.
+        This is not a chatbot. This is governed decisioning."
+      </div>
+
+      <div class="sub-h">Show</div>
+      <div class="show">
+        <ul>
+          <li><strong>Live decision feed</strong> — recent AI decisions across all 5 agent types.</li>
+          <li><strong>Click into one decision</strong> — show input context, the model's reasoning text, the action chosen, the confidence.</li>
+          <li><strong>Agent type breakdown</strong> — digital channel agent, quality reviewer, dispute triage, settlement negotiator, etc.</li>
+          <li><strong>Escalation rate panel</strong> — show that some % of decisions get escalated to humans. That's by design — AI knows what it doesn't know.</li>
+          <li><strong>Tokens used + latency per decision</strong> — observable cost.</li>
+        </ul>
+      </div>
+
+      <div class="sub-h amber">Anticipated questions</div>
+      <div class="qa">
+        <div class="q">Which model is this? GPT? Claude?</div>
+        <div class="a">"Anthropic's Claude. Same family the platform-level prompts assume. The model identity is captured in every reasoning trace — if we swap models, you'll see when and why."</div>
+        <div class="q">How do you prevent prompt injection?</div>
+        <div class="a">"Agents never see raw customer-provided text in the system prompt. We extract structured fields, validate them, and pass them as tool inputs. The agent's output is also constrained to tool calls — it can't say 'transfer money' as freeform text. The combination kills the vast majority of injection vectors."</div>
+        <div class="q">Are you using RAG?</div>
+        <div class="a">"For policy lookups, yes — but the source documents are versioned and read-only. The agents can't write to the knowledge base. Every retrieval is logged with the document version, so you can reproduce any decision."</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 4 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 4 of 8</div>
+      <div class="title">Compliance in flight — show a real Reg F block</div>
+      <div class="time">2 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue cco">CCO</span>The Chief Compliance Officer's "I sleep at night" moment</div>
+      <div class="k">Navigate to</div><div class="v"><strong>Strategy Console</strong> → Compliance gates panel (or Operations Floor → Compliance feed)</div>
+      <div class="k">What to do</div><div class="v">Find a recent <code>action_blocked</code> event. Click into it to show the rule that fired and the OPA input.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "This is the most important slide in the demo. The platform is enforcing Reg F at the
+        millisecond the action is about to be taken — not at end-of-day in a batch audit. The
+        compliance rules are written in Rego, with the regulation cited inline in the policy
+        code. When the platform decides to call someone, it pings the policy engine first.
+        If the policy says no, the action is blocked, the reason is recorded, and the
+        attempted action is added to the compliance event stream. Here — look — this customer
+        had a bankruptcy flag on their file. The platform tried to send them a settlement
+        offer. The policy said no, cited <code>§1006.6(b)(1)</code>, and the action was suppressed
+        before it left the building."
+      </div>
+
+      <div class="sub-h">Show</div>
+      <div class="show">
+        <ul>
+          <li>Filter the compliance feed for <code>action_blocked</code> events.</li>
+          <li>Click into one. Show: customer ID, action attempted, channel, rule name (e.g. <code>reg_f.bankruptcy_suppression</code>), regulation citation.</li>
+          <li>Show the OPA input that was evaluated — the platform stores it for replay.</li>
+          <li>Point to the <strong>WORM audit trail</strong> table in the API docs: every decision, write-once, tamper-evident at the DB layer.</li>
+        </ul>
+      </div>
+
+      <div class="sub-h amber">Anticipated questions</div>
+      <div class="qa">
+        <div class="q">What if you need to change a rule? How fast?</div>
+        <div class="a">"OPA hot-reloads policies on file change. So: edit the Rego, commit, deploy — and the next decision uses the new rule. We versioned the policies, so the audit trail records which version made each decision."</div>
+        <div class="q">Can my compliance team see this without a developer?</div>
+        <div class="a">"They get the Compliance landing page — same data, no JSON, no Rego. They see: blocked actions in the last 24 hours, by rule, by reason. And they can drill into any one. We've built it as the surface they'd use day one."</div>
+        <div class="q">What about state-level regs? UDAAP? FCRA?</div>
+        <div class="a">"Add another policy module. The architecture supports it — Rego files are namespaced by regulation. We've shown Reg F; you'd add UDAAP, FCRA, state laws, internal policies, whatever applies. They compose."</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 5 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 5 of 8</div>
+      <div class="title">Risk &amp; ML — model risk, A/B, lift with p-values</div>
+      <div class="time">2.5 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue cro">CRO</span>This is where the CRO's eyes light up</div>
+      <div class="k">Navigate to</div><div class="v"><strong>Risk &amp; ML</strong> page</div>
+      <div class="k">What to do</div><div class="v">Scroll top to bottom. Stop on the A/B significance panel and the roll-rate forecast.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "What I want to convince you of in the next two minutes is that this platform speaks
+        your team's language. Top of the page: this is a real trained risk model — gradient
+        boosting, the features you'd expect, AUC and Brier reported, feature importance
+        visible. Middle: champion-challenger A/B framework — you can see lift by metric,
+        sample size, p-value, and required-n to detect a target effect. Bottom: Markov
+        roll-rate forecast — the platform builds the transition matrix from real lifecycle
+        events and projects the portfolio forward 30, 60, 90 days. This is not a vendor's
+        dashboard. This is the platform reading its own behavior and reporting on it."
+      </div>
+
+      <div class="sub-h">Show</div>
+      <div class="show">
+        <ul>
+          <li><strong>Model card</strong> — algorithm, training snapshots, AUC, Brier, calibration, feature importance top 5.</li>
+          <li><strong>Feature store sample</strong> — pick one customer, show the 25 features that go into the model + where each came from.</li>
+          <li><strong>A/B significance panel</strong> — show champion vs. challenger lift, p-value, sample size, required-n.</li>
+          <li><strong>Recovery curves</strong> — by cohort, with cure rate over time.</li>
+          <li><strong>Roll-rate Markov projection</strong> — current state + 30/60/90 day forward distribution.</li>
+        </ul>
+      </div>
+
+      <div class="sub-h amber">Anticipated questions</div>
+      <div class="qa">
+        <div class="q">Who validates the model? SR 11-7?</div>
+        <div class="a">"You do — we don't pretend to be your model risk function. What the platform gives you is the artifacts: training snapshots, holdout AUC, calibration plots, feature importance, drift detection, version history. Your MRM team validates; the platform makes their job possible."</div>
+        <div class="q">How fast can we A/B a new strategy?</div>
+        <div class="a">"Activate the challenger version with an allocation percentage — say 10% — and the platform splits new customers. After a few weeks, this panel will tell you whether the lift is statistically significant. The required-n calculator tells you upfront how long that'll take."</div>
+        <div class="q">What if the model degrades?</div>
+        <div class="a">"You'd see it in this dashboard — drift in the feature distributions, drift in the prediction distribution, declining AUC on labeled outcomes. We'd also automate alerting on those signals; that's a Horizon-2 item on the roadmap."</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 6 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 6 of 8</div>
+      <div class="title">Data Lakehouse — lineage in 6 tiers</div>
+      <div class="time">2 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue cto">CTO</span>The CTO's "how do you actually store and prove this" question</div>
+      <div class="k">Navigate to</div><div class="v"><strong>Data Lakehouse</strong> page</div>
+      <div class="k">What to do</div><div class="v">Show the medallion (Bronze/Silver/Gold) layout. Pick one event_id and walk it through all 6 tiers.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "Every event the platform sees is persisted six times — Kafka topic, Bronze JSONL on S3,
+        Silver typed Parquet on S3, Gold mart in the curated layer, Postgres for operational
+        queries, Redis for the real-time pulse. Six tiers, one event, full lineage. Watch
+        this — I'm going to paste in one event ID, and the lineage panel will trace it through
+        every tier with timestamps. <em>(Paste an event_id from a recent decision.)</em>
+        Bronze caught it 200ms after Kafka. Silver compacted it in the next batch. Gold's
+        customer_360 mart has it rolled up. Postgres has the projected row. Redis has the
+        published pulse update. This is what governable means at the data layer."
+      </div>
+
+      <div class="sub-h">Show</div>
+      <div class="show">
+        <ul>
+          <li>Medallion overview — Bronze row count, Silver row count, Gold mart count.</li>
+          <li>Lineage panel — paste an event_id, get the 6-tier walk with timestamps.</li>
+          <li>DuckDB query box — run a quick SELECT on the silver layer to show real Parquet behind it.</li>
+          <li>S3 bucket names visible (in your real AWS account).</li>
+        </ul>
+      </div>
+
+      <div class="sub-h amber">Anticipated questions</div>
+      <div class="qa">
+        <div class="q">Why six tiers? Isn't that a lot?</div>
+        <div class="a">"Each tier serves a different consumer at a different latency. Redis for sub-second UI. Postgres for application reads. Gold marts for BI. Silver Parquet for ad-hoc analytics. Bronze for replay. Kafka for streaming. We don't manually replicate — every tier is computed from the one upstream, so the data is consistent by construction."</div>
+        <div class="q">Cost?</div>
+        <div class="a">"S3 storage is cheap — sub-cent per GB-month. The compute to compact Bronze→Silver runs on a schedule and is negligible at this scale. For your bank's volume, total lakehouse cost would be a few hundred a month. Cost dashboard on Risk & ML page shows current spend."</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 7 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 7 of 8</div>
+      <div class="title">Platform Operations — the runtime is operable</div>
+      <div class="time">1.5 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue cto">CTO</span>This is for the SRE/Platform team your CTO will hand it to</div>
+      <div class="k">Navigate to</div><div class="v"><strong>Platform Operations</strong> page</div>
+      <div class="k">What to do</div><div class="v">Quick scan. Heartbeats, Kafka topology, consumer lag, recent OPA decisions.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "If your on-call gets paged at 3am, this is what they open. Service heartbeats with
+        throughput and p99 latency. Per-partition Kafka consumer lag — not average, per partition,
+        because hot partitions are where outages start. Recent OPA decision rate. End-to-end
+        trace viewer. There's a runbook entry for every likely failure mode. This is the
+        difference between 'we built a demo' and 'we built a platform.'"
+      </div>
+
+      <div class="sub-h">Show</div>
+      <div class="show">
+        <ul>
+          <li>Service heartbeat grid — every service green, with throughput numbers.</li>
+          <li>Kafka topic table with partition-level offsets.</li>
+          <li>OPA decision feed.</li>
+          <li>Cost panel (AI tokens + S3 + compute) — observable spend.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STOP 8 -->
+  <div class="stop">
+    <div class="stop-header">
+      <div class="num">Stop 8 of 8</div>
+      <div class="title">The Strategy Console — show the strategy version trail</div>
+      <div class="time">2 min</div>
+    </div>
+    <div class="stop-meta">
+      <div class="k">Audience</div>
+      <div class="v"><span class="cue cro">CRO</span><span class="cue coo">COO</span>Close on the question "how do we evolve safely?"</div>
+      <div class="k">Navigate to</div><div class="v"><strong>Strategy Console</strong></div>
+      <div class="k">What to do</div><div class="v">Walk the strategy version history. Show champion + challenger + retired versions with rationale.</div>
+    </div>
+    <div class="stop-body">
+
+      <div class="sub-h">Say</div>
+      <div class="say">
+        "Last thing: how do you safely evolve a platform that's deciding millions of dollars
+        of treatment every month? You version your strategies. You allocate traffic. You
+        track lift with statistical significance. You record the rationale every time you
+        promote, retire, or roll back a version. This page is the operating record of those
+        decisions. The audit trail isn't just events and AI reasoning — it's also the
+        strategy decisions themselves. Your CRO can show your board exactly what changed,
+        when, why, and what the outcome was."
+      </div>
+
+      <div class="sub-h">Show</div>
+      <div class="show">
+        <ul>
+          <li>Strategy version timeline — v1.0.0 champion, v1.1.0 challenger 20%, v0.9.0 retired with reason.</li>
+          <li>Customer allocation pie — which version each customer is on.</li>
+          <li>Per-version metrics — cure rate, escalation rate, compliance blocks.</li>
+          <li>The "promote challenger" button — close with: "When you're ready to promote, one click. It's gated by an approval workflow we can plug into your existing tooling."</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Closing -->
+  <div class="closing">
+    <h3>The close — what to leave them with (2 min)</h3>
+    <p>"Three things I want you to take away:"</p>
+    <ol style="color:#cbd5e1; margin:8px 0 16px 22px;">
+      <li><strong>This is real.</strong> Not slides. Not vapor. The agents, the policies, the lakehouse, the risk model — they're running, right now, on real infrastructure, with real AWS S3 holding the lakehouse layers."</li>
+      <li><strong>Your team can take this and extend it.</strong> Every pattern in here — governed AI, policy-as-code, champion-challenger, medallion lakehouse — is one of ten reusable capabilities packaged in a Claude Code plugin. We can hand it over and have your team productive on day one.</li>
+      <li><strong>The timeline is realistic.</strong> Twelve weeks to a stakeholder-grade demo in your environment with your data. Six months to production-grade for one product line. Eighteen months to enterprise-wide collections.</li>
+    </ol>
+    <p style="color:#fff;"><strong>"What we'd like to do next is schedule a two-hour deep-dive with your platform team and your CRO's analytics team to map the variability — what's different about your portfolio, your tech stack, your regulatory frame — and come back to you with a 12-week plan tailored to your environment."</strong></p>
+  </div>
+
+  <!-- ───────────────────────────────────────────────────────────────── -->
+  <!-- APPENDIX -->
+  <!-- ───────────────────────────────────────────────────────────────── -->
+
+  <div class="appendix">
+    <h2>Appendix</h2>
+
+    <h3>If something breaks mid-demo</h3>
+    <table class="simple">
+      <thead><tr><th>Symptom</th><th>Quick recovery</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Page won't load</strong></td>
+          <td>The frontend dev server died. Open a terminal, <code>cd web && pnpm dev</code>. Buy time by walking back to your last working page.</td>
+        </tr>
+        <tr>
+          <td><strong>Pulse strip shows zeros</strong></td>
+          <td>Traffic generator stopped. <code>uv run python -m scripts.run_services</code>. Tell them: "let me restart the synthetic traffic — give it 30 sec." Move to a static page (Risk & ML model card).</td>
+        </tr>
+        <tr>
+          <td><strong>AI Explorer is empty</strong></td>
+          <td>AI agents haven't fired yet. Drive synthetic events with a scenario: <code>uv run python -m scripts.demo cross_channel</code>. Buy 30 sec by walking through the static lakehouse architecture diagram.</td>
+        </tr>
+        <tr>
+          <td><strong>An OPA rule blocks something you didn't expect</strong></td>
+          <td>"That's actually the platform doing exactly what we want — refusing an action because of policy. Let me show you why." Open the compliance event and walk through the rule citation. Turn the problem into a feature.</td>
+        </tr>
+        <tr>
+          <td><strong>Audience asks about a competitor</strong></td>
+          <td>"Happy to compare in detail offline. Today let me focus on what's in front of you — every capability you're seeing is in your codebase, not behind a vendor wall." Move on.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Alternative paths (if you have less time)</h3>
+    <div class="col">
+      <div class="ap-card">
+        <strong>10-minute version (CTO-only):</strong> Operations Floor → AI Explorer → Lakehouse → Platform Ops. Skip Customer Story, Compliance, Risk &amp; ML, Strategy Console.
+      </div>
+      <div class="ap-card">
+        <strong>10-minute version (CRO-only):</strong> Operations Floor → Customer Story → Risk &amp; ML → Strategy Console. Skip AI Explorer details, Lakehouse, Platform Ops.
+      </div>
+      <div class="ap-card">
+        <strong>5-minute lightning version:</strong> Operations Floor (1 min) → AI Explorer (1 min) → Compliance block (1 min) → Risk &amp; ML A/B panel (1 min) → close (1 min). Each stop one specific thing.
+      </div>
+      <div class="ap-card">
+        <strong>30-minute deep-dive:</strong> The full 8 stops + 10 minutes on the lakehouse query layer (live DuckDB queries) + 10 minutes on the strategy version diff (show Rego policies side by side).
+      </div>
+    </div>
+
+    <h3>Phrases to use</h3>
+    <ul>
+      <li>"<strong>Every decision is a structured record</strong>" — when talking AI.</li>
+      <li>"<strong>Policy at the millisecond the action is taken</strong>" — when talking compliance.</li>
+      <li>"<strong>Six tiers, one event, full lineage</strong>" — when talking lakehouse.</li>
+      <li>"<strong>Statistical significance, not 'felt better'</strong>" — when talking risk.</li>
+      <li>"<strong>This is not a chatbot — this is governed decisioning</strong>" — when AI comes up.</li>
+    </ul>
+
+    <h3>Phrases to avoid</h3>
+    <ul>
+      <li>"It's just a POC" — undersells the real engineering. Say "the reference implementation."</li>
+      <li>"Should work" — sounds uncertain. Demo what's in front of you; if something fails, see the table above.</li>
+      <li>"We could add…" — overpromises. Say "the architecture supports it; we'd estimate a sprint to add."</li>
+      <li>"Magic happens" — never say magic. Always explain.</li>
+    </ul>
+
+    <h3>Leave-behinds (what to email after)</h3>
+    <ol>
+      <li><code>docs/platform-brief.html</code> — the self-contained stakeholder brief.</li>
+      <li>A one-page capability matrix mapping their stakeholders → platform surfaces.</li>
+      <li>The 12-week roadmap (use the <code>/engagement-roadmap</code> command output).</li>
+      <li>Calendar hold for the 2-hour deep-dive in the next 2 weeks.</li>
+    </ol>
+
+  </div>
+
+</div>
+</body>
+</html>
