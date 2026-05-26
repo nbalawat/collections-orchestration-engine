@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { api } from '@/lib/api'
@@ -154,6 +154,7 @@ export default function Scenarios() {
   const [capturedEvents, setCapturedEvents] = useState<LiveEvent[]>([])
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null)
   const [draining, setDraining] = useState(false)
+  const [pendingCount, setPendingCount] = useState(0)
   const eventListRef = useRef<HTMLDivElement>(null)
   const lastWsCountRef = useRef(0)
   const seenIdsRef = useRef(new Set<string>())
@@ -171,14 +172,14 @@ export default function Scenarios() {
     queryKey: ['scenario-customer360', activeCustomer],
     queryFn: () => api.getCustomer360(activeCustomer!),
     enabled: !!activeCustomer,
-    refetchInterval: (scenarioStatus === 'running' || draining) ? 3000 : false,
+    refetchInterval: (scenarioStatus === 'running' || draining || pendingCount > 0) ? 3000 : false,
   })
 
   const { data: workflowState, refetch: refetchWorkflow } = useQuery({
     queryKey: ['scenario-workflow', activeCustomer],
     queryFn: () => api.getJourneyState(activeCustomer!).catch(() => null),
     enabled: !!activeCustomer,
-    refetchInterval: (scenarioStatus === 'running' || draining) ? 2000 : false,
+    refetchInterval: (scenarioStatus === 'running' || draining || pendingCount > 0) ? 2000 : false,
   })
 
   const capturing = scenarioStatus === 'running' || draining
@@ -201,19 +202,26 @@ export default function Scenarios() {
       // Enqueue oldest-first so the paced reveal plays in chronological order,
       // each new event landing at the top of the list.
       pendingRef.current.push(...matching.slice().reverse())
+      setPendingCount(pendingRef.current.length)
     }
   }, [wsEvents, activeCustomer, capturing])
 
   // Drain the pending queue at a steady cadence while a scenario is active.
+  // The revealed events are the single clock: the step tracker, header status,
+  // and right-panel stage all follow this, so the whole theater stays in sync.
   useEffect(() => {
     if (!activeScenario) return
     const timer = setInterval(() => {
       if (pendingRef.current.length === 0) return
       const next = pendingRef.current.shift()!
       setCapturedEvents(prev => [next, ...prev])
+      setPendingCount(pendingRef.current.length)
     }, REVEAL_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [activeScenario])
+
+  // Still revealing buffered events even though the server-side run finished?
+  const revealActive = pendingCount > 0
 
   const runMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) => api.runScenario(id, body),
@@ -242,6 +250,7 @@ export default function Scenarios() {
     lastWsCountRef.current = 0
     seenIdsRef.current.clear()
     pendingRef.current = []
+    setPendingCount(0)
     runMutation.mutate({ id: scenarioId, body: { customer_id: customerId } })
   }
 
@@ -253,6 +262,7 @@ export default function Scenarios() {
     setScenarioError(null)
     setCapturedEvents([])
     pendingRef.current = []
+    setPendingCount(0)
   }
 
   const scenarios = scenariosData?.scenarios ?? []
@@ -264,6 +274,7 @@ export default function Scenarios() {
         scenario={activeScenarioData}
         customerId={activeCustomer!}
         status={scenarioStatus}
+        revealActive={revealActive}
         result={scenarioResult}
         error={scenarioError}
         events={capturedEvents}
@@ -332,6 +343,7 @@ interface ScenarioTheaterProps {
   scenario: { id: string; name: string; description: string; default_customer: string }
   customerId: string
   status: 'idle' | 'running' | 'completed' | 'error'
+  revealActive: boolean
   result: unknown
   error: string | null
   events: LiveEvent[]
@@ -345,22 +357,64 @@ interface ScenarioTheaterProps {
 }
 
 function ScenarioTheater({
-  scenario, customerId, status, result, error, events, customer360,
+  scenario, customerId, status, revealActive, result, error, events, customer360,
   workflowState, connected, expandedEvent, setExpandedEvent, eventListRef, onReset,
 }: ScenarioTheaterProps) {
   const profile = customer360?.profile as Record<string, unknown> | undefined
   const accounts = customer360?.accounts || []
   const firstAccount = accounts[0] as Record<string, unknown> | undefined
   const flags = customer360?.compliance_flags || []
-  const wfState = workflowState as Record<string, unknown> | null
+  const wfStateRaw = workflowState as Record<string, unknown> | null
   const steps = SCENARIO_STEPS[scenario.id] || []
 
-  const estimatedStep = Math.min(
-    steps.length,
-    status === 'completed' ? steps.length :
-    status === 'error' ? steps.length :
-    Math.max(1, Math.ceil((events.length / Math.max(steps.length, 1)) * steps.length))
-  )
+  // The server-side run may have finished, but if events are still revealing we
+  // keep the whole theater in "running" mode so the header, step tracker, and
+  // right panel stay in lockstep with the visible stream.
+  const effectiveStatus = (status === 'completed' && revealActive) ? 'running' : status
+
+  // Live view model derived from the events revealed SO FAR — this is what makes
+  // the right panel and step tracker advance naturally with the stream.
+  const liveView = useMemo(() => {
+    let stage: string | null = null            // most recent revealed stage
+    const counts = { decisions: 0, compliance: 0, actions: 0, ai: 0, channel: 0 }
+    let blocked = 0
+    // `events` is newest-first.
+    for (const e of events) {
+      const cat = eventCategory(e)
+      if (cat === 'lifecycle' && !stage) {
+        const rec = e as Record<string, unknown>
+        const payload = (rec.payload as Record<string, unknown>) || {}
+        stage = (rec.to_stage as string) || (payload.to_stage as string) || null
+      }
+      if (cat === 'decision') counts.decisions++
+      else if (cat === 'compliance') {
+        counts.compliance++
+        const rec = e as Record<string, unknown>
+        if (rec.action_blocked || (rec.payload as Record<string, unknown>)?.action_blocked) blocked++
+      }
+      else if (cat === 'action') counts.actions++
+      else if (cat === 'ai') counts.ai++
+      else if (cat === 'channel') counts.channel++
+    }
+    return { stage, counts, blocked, total: events.length }
+  }, [events])
+
+  // Merge: prefer the live-derived values while revealing; fall back to the
+  // polled workflow state for fields we don't derive (segment, PTP, flags).
+  const wfState = wfStateRaw
+  const liveStage = liveView.stage || (wfStateRaw?.stage as string) || null
+  const liveEventCount = Math.max(liveView.total, 0)
+  const liveActionCount = liveView.counts.actions || (wfStateRaw?.actions_count as number) || 0
+
+  // Step tracker advances with revealed events; only fully completes once the
+  // reveal queue has drained (effectiveStatus settles to completed/error).
+  const revealedFraction = steps.length > 0
+    ? Math.min(1, events.length / Math.max(steps.length * 3, 1))   // ~3 events per step
+    : 0
+  const estimatedStep =
+    (effectiveStatus === 'completed' || effectiveStatus === 'error')
+      ? steps.length
+      : Math.max(1, Math.min(steps.length, Math.round(revealedFraction * steps.length)))
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -375,17 +429,17 @@ function ScenarioTheater({
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {status === 'running' && (
+          {effectiveStatus === 'running' && (
             <span className="flex items-center gap-2 text-sm text-blue-600 font-medium">
               <Loader size={14} className="animate-spin" /> Running...
             </span>
           )}
-          {status === 'completed' && (
+          {effectiveStatus === 'completed' && (
             <span className="flex items-center gap-2 text-sm text-green-600 font-medium">
               <CheckCircle size={14} /> Completed
             </span>
           )}
-          {status === 'error' && (
+          {effectiveStatus === 'error' && (
             <span className="flex items-center gap-2 text-sm text-red-600 font-medium">
               <AlertCircle size={14} /> Failed
             </span>
@@ -407,14 +461,14 @@ function ScenarioTheater({
               <div className="flex items-center gap-1.5">
                 <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                   i < estimatedStep ? 'bg-green-500 text-white' :
-                  i === estimatedStep && status === 'running' ? 'bg-blue-500 text-white animate-pulse' :
+                  i === estimatedStep && effectiveStatus === 'running' ? 'bg-blue-500 text-white animate-pulse' :
                   'bg-slate-200 text-slate-500'
                 }`}>
                   {i < estimatedStep ? <CheckCircle size={12} /> : i + 1}
                 </div>
                 <span className={`text-xs whitespace-nowrap ${
                   i < estimatedStep ? 'text-green-700 font-medium' :
-                  i === estimatedStep && status === 'running' ? 'text-blue-700 font-medium' :
+                  i === estimatedStep && effectiveStatus === 'running' ? 'text-blue-700 font-medium' :
                   'text-slate-400'
                 }`}>
                   {step}
@@ -429,7 +483,7 @@ function ScenarioTheater({
         <div className="flex-1 flex flex-col min-w-0 border-r border-slate-200">
           <div className="shrink-0 px-4 py-2 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Radio size={14} className={status === 'running' ? 'text-red-500 animate-pulse' : 'text-slate-400'} />
+              <Radio size={14} className={effectiveStatus === 'running' ? 'text-red-500 animate-pulse' : 'text-slate-400'} />
               <h3 className="text-sm font-semibold text-slate-700">Live Event Stream</h3>
               <span className="badge badge-gray text-[10px]">{events.length}</span>
             </div>
@@ -601,17 +655,17 @@ function ScenarioTheater({
                 <div className="flex items-center gap-2 mb-3">
                   <Activity size={14} className="text-blue-500" />
                   <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Workflow State</h4>
-                  {status === 'running' && (
+                  {effectiveStatus === 'running' && (
                     <span className="ml-auto flex items-center gap-1 text-[10px] text-blue-600">
-                      <RefreshCw size={10} className="animate-spin" /> Auto-refreshing
+                      <RefreshCw size={10} className="animate-spin" /> Live
                     </span>
                   )}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-500">Stage</span>
-                    <span className={`badge text-[10px] ${stageBadgeColor(wfState.stage as string || '')}`}>
-                      {((wfState.stage as string) || 'UNKNOWN').replace(/_/g, ' ')}
+                    <span className={`badge text-[10px] ${stageBadgeColor(liveStage || '')}`}>
+                      {(liveStage || 'UNKNOWN').replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -622,11 +676,11 @@ function ScenarioTheater({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-500">Events</span>
-                    <span className="text-xs font-medium text-slate-700">{wfState.events_count as number ?? 0}</span>
+                    <span className="text-xs font-medium text-slate-700">{liveEventCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-slate-500">Actions</span>
-                    <span className="text-xs font-medium text-slate-700">{wfState.actions_count as number ?? 0}</span>
+                    <span className="text-xs font-medium text-slate-700">{liveActionCount}</span>
                   </div>
                   {(wfState.compliance_flags as string[])?.length > 0 && (
                     <div className="flex items-center justify-between">
@@ -681,7 +735,7 @@ function ScenarioTheater({
               </div>
             )}
 
-            {status === 'completed' && result && (
+            {effectiveStatus === 'completed' && result && (
               <div className="card border-green-200 bg-green-50">
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle size={14} className="text-green-500" />
