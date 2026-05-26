@@ -157,6 +157,11 @@ export default function Scenarios() {
   const eventListRef = useRef<HTMLDivElement>(null)
   const lastWsCountRef = useRef(0)
   const seenIdsRef = useRef(new Set<string>())
+  // Paced reveal: events arrive from the workflow in bursts, but for a demo we
+  // want them to surface one at a time on a steady ~1.5s cadence so the room
+  // can follow the story. Incoming events queue here and drain one per tick.
+  const pendingRef = useRef<LiveEvent[]>([])
+  const REVEAL_INTERVAL_MS = 1500
 
   const { data: scenariosData } = useQuery({ queryKey: ['scenarios'], queryFn: api.listScenarios })
 
@@ -193,9 +198,22 @@ export default function Scenarios() {
       return true
     })
     if (matching.length > 0) {
-      setCapturedEvents(prev => [...matching, ...prev])
+      // Enqueue oldest-first so the paced reveal plays in chronological order,
+      // each new event landing at the top of the list.
+      pendingRef.current.push(...matching.slice().reverse())
     }
   }, [wsEvents, activeCustomer, capturing])
+
+  // Drain the pending queue at a steady cadence while a scenario is active.
+  useEffect(() => {
+    if (!activeScenario) return
+    const timer = setInterval(() => {
+      if (pendingRef.current.length === 0) return
+      const next = pendingRef.current.shift()!
+      setCapturedEvents(prev => [next, ...prev])
+    }, REVEAL_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [activeScenario])
 
   const runMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) => api.runScenario(id, body),
@@ -203,7 +221,7 @@ export default function Scenarios() {
       setScenarioStatus('completed')
       setScenarioResult(data.result)
       setDraining(true)
-      setTimeout(() => setDraining(false), 8000)
+      setTimeout(() => setDraining(false), 12000)
       refetchWorkflow()
       queryClient.invalidateQueries({ queryKey: ['scenario-customer360', activeCustomer] })
     },
@@ -223,6 +241,7 @@ export default function Scenarios() {
     clearWs()
     lastWsCountRef.current = 0
     seenIdsRef.current.clear()
+    pendingRef.current = []
     runMutation.mutate({ id: scenarioId, body: { customer_id: customerId } })
   }
 
@@ -233,6 +252,7 @@ export default function Scenarios() {
     setScenarioResult(null)
     setScenarioError(null)
     setCapturedEvents([])
+    pendingRef.current = []
   }
 
   const scenarios = scenariosData?.scenarios ?? []
